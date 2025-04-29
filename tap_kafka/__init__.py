@@ -32,6 +32,8 @@ DEFAULT_MAX_POLL_RECORDS = 500
 DEFAULT_MESSAGE_FORMAT = 'json'
 DEFAULT_PROTO_SCHEMA = None
 DEFAULT_PROTO_CLASSES_DIR = os.path.join(os.getcwd(), 'tap-kafka-proto-classes')
+DEFAULT_SECURITY_PROTOCOL = 'SASL_SSL'
+DEFAULT_SASL_MECHANISMS = 'PLAIN'
 
 
 def dump_catalog(all_streams):
@@ -50,8 +52,8 @@ def do_discovery(config):
     }
 
     if config.get('sasl_username') and config.get('sasl_password'):
-        consumer_conf['security.protocol'] = 'SASL_SSL'
-        consumer_conf['sasl.mechanisms'] = 'PLAIN'
+        consumer_conf['security.protocol'] = config['security_protocol']
+        consumer_conf['sasl.mechanisms'] = config['sasl_mechanisms']
         consumer_conf['sasl.username'] = config['sasl_username']
         consumer_conf['sasl.password'] = config['sasl_password']
 
@@ -129,6 +131,11 @@ def generate_config(args_config):
         'proto_schema': args_config.get('proto_schema', DEFAULT_PROTO_SCHEMA),
         'proto_classes_dir': args_config.get('proto_classes_dir', DEFAULT_PROTO_CLASSES_DIR),
         'debug_contexts': args_config.get('debug_contexts'),
+
+        'security_protocol': args_config.get('security_protocol', DEFAULT_SECURITY_PROTOCOL),
+        'sasl_mechanisms': args_config.get('sasl_mechanisms', DEFAULT_SASL_MECHANISMS),
+        'sasl_username': args_config.get('sasl_username'),
+        'sasl_password': args_config.get('sasl_password')
     }
 
     validate_config(config)

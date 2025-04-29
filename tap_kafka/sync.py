@@ -136,8 +136,8 @@ def init_kafka_consumer(kafka_config):
     }
 
     if kafka_config.get('sasl_username') and kafka_config.get('sasl_password'):
-        consumer_conf['security.protocol'] = 'SASL_SSL'
-        consumer_conf['sasl.mechanisms'] = 'PLAIN'
+        consumer_conf['security.protocol'] = kafka_config['security_protocol']
+        consumer_conf['sasl.mechanisms'] = kafka_config['sasl_mechanisms']
         consumer_conf['sasl.username'] = kafka_config['sasl_username']
         consumer_conf['sasl.password'] = kafka_config['sasl_password']
 
