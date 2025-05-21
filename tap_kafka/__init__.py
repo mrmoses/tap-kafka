@@ -134,8 +134,8 @@ def generate_config(args_config):
 
         'security_protocol': args_config.get('security_protocol', DEFAULT_SECURITY_PROTOCOL),
         'sasl_mechanisms': args_config.get('sasl_mechanisms', DEFAULT_SASL_MECHANISMS),
-        'sasl_username': args_config.get('sasl_username'),
-        'sasl_password': args_config.get('sasl_password')
+        'sasl_username': args_config.get('sasl_username', os.getenv("TAP_KAFKA_SASL_USERNAME")),
+        'sasl_password': args_config.get('sasl_password', os.getenv("TAP_KAFKA_SASL_PASSWORD"))
     }
 
     validate_config(config)
