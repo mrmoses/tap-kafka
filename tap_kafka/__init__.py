@@ -20,21 +20,23 @@ REQUIRED_CONFIG_KEYS = [
     'topic'
 ]
 
-DEFAULT_INITIAL_START_TIME = 'latest'
-DEFAULT_PARTITIONS = []
-DEFAULT_MAX_RUNTIME_MS = 300000
-DEFAULT_COMMIT_INTERVAL_MS = 5000
-DEFAULT_CONSUMER_TIMEOUT_MS = 10000
-DEFAULT_SESSION_TIMEOUT_MS = 30000
-DEFAULT_HEARTBEAT_INTERVAL_MS = 10000
-DEFAULT_MAX_POLL_INTERVAL_MS = 300000
-DEFAULT_MAX_POLL_RECORDS = 500
-DEFAULT_MESSAGE_FORMAT = 'json'
-DEFAULT_PROTO_SCHEMA = None
-DEFAULT_PROTO_CLASSES_DIR = os.path.join(os.getcwd(), 'tap-kafka-proto-classes')
-DEFAULT_SECURITY_PROTOCOL = 'SASL_SSL'
-DEFAULT_SASL_MECHANISMS = 'PLAIN'
-
+from .defaults import (
+    DEFAULT_INITIAL_START_TIME,
+    DEFAULT_PARTITIONS,
+    DEFAULT_BOOKMARK_PRECEDENCE,
+    DEFAULT_MAX_RUNTIME_MS,
+    DEFAULT_COMMIT_INTERVAL_MS,
+    DEFAULT_CONSUMER_TIMEOUT_MS,
+    DEFAULT_SESSION_TIMEOUT_MS,
+    DEFAULT_HEARTBEAT_INTERVAL_MS,
+    DEFAULT_MAX_POLL_INTERVAL_MS,
+    DEFAULT_MAX_POLL_RECORDS,
+    DEFAULT_MESSAGE_FORMAT,
+    DEFAULT_PROTO_SCHEMA,
+    DEFAULT_PROTO_CLASSES_DIR,
+    DEFAULT_SECURITY_PROTOCOL,
+    DEFAULT_SASL_MECHANISMS,
+)
 
 def dump_catalog(all_streams):
     """Dump every stream catalog as JSON to STDOUT"""
@@ -100,6 +102,8 @@ def validate_config(config) -> None:
 
     if not isinstance(config.get('partitions'), list):
         raise InvalidConfigException(f"Invalid config. 'partitions' must be a python 'list', not a {type(config.get('partitions'))}")
+    
+    validate_bookmark_precedence(config.get('bookmark_precedence'))
 
     if config.get('message_format') not in ['json', 'protobuf']:
         raise InvalidConfigException("Invalid config. 'message_format' needs to be one of 'json' or 'protobuf'")
@@ -107,6 +111,21 @@ def validate_config(config) -> None:
     if config.get('message_format') == 'protobuf' and not config.get('proto_schema'):
         raise InvalidConfigException("Invalid config. Cannot find required proto_schema for protobuf message type")
 
+def validate_bookmark_precedence(bookmark_precedence):   
+    """Validate 'bookmark_precedence' configuration value""" 
+    if not isinstance(bookmark_precedence, list):
+        raise InvalidConfigException(f"Invalid config. 'bookmark_precedence' must be a python 'list', not a {type(bookmark_precedence)}")
+
+    allowed_precedence_keys = {'offset', 'timestamp', 'start_time'}
+    
+    unsupported_keys = set(bookmark_precedence) - allowed_precedence_keys
+    
+    # If the resulting set is not empty, it means there were invalid keys.
+    if unsupported_keys:
+        raise InvalidConfigException(
+            f"Invalid config. 'bookmark_precedence' contains unsupported values: {list(unsupported_keys)}. "
+            f"Only the following values are allowed: {list(allowed_precedence_keys)}"
+        )
 
 def generate_config(args_config):
     config = {
@@ -120,6 +139,7 @@ def generate_config(args_config):
         'use_message_key': args_config.get('use_message_key', True),
         'initial_start_time': args_config.get('initial_start_time', DEFAULT_INITIAL_START_TIME),
         'partitions': args_config.get('partitions', DEFAULT_PARTITIONS),
+        'bookmark_precedence': args_config.get('bookmark_precedence', DEFAULT_BOOKMARK_PRECEDENCE),
         'max_runtime_ms': args_config.get('max_runtime_ms', DEFAULT_MAX_RUNTIME_MS),
         'commit_interval_ms': args_config.get('commit_interval_ms', DEFAULT_COMMIT_INTERVAL_MS),
         'consumer_timeout_ms': args_config.get('consumer_timeout_ms', DEFAULT_CONSUMER_TIMEOUT_MS),
