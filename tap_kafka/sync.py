@@ -135,6 +135,9 @@ def init_kafka_consumer(kafka_config):
         'value.deserializer': init_value_deserializer(kafka_config),
         'error_cb': error_cb,
     }
+    
+    client_id = kafka_config.get('client_id')
+    if client_id: consumer_conf['client.id'] = client_id
 
     if kafka_config.get('sasl_username') and kafka_config.get('sasl_password'):
         consumer_conf['security.protocol'] = kafka_config['security_protocol']

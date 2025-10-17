@@ -53,6 +53,9 @@ def do_discovery(config):
         'auto.offset.reset': 'earliest',
     }
 
+    client_id = config.get('client_id')
+    if client_id: consumer_conf['client.id'] = client_id
+
     if config.get('sasl_username') and config.get('sasl_password'):
         consumer_conf['security.protocol'] = config['security_protocol']
         consumer_conf['sasl.mechanisms'] = config['sasl_mechanisms']
@@ -111,6 +114,7 @@ def validate_config(config) -> None:
     if config.get('message_format') == 'protobuf' and not config.get('proto_schema'):
         raise InvalidConfigException("Invalid config. Cannot find required proto_schema for protobuf message type")
 
+
 def validate_bookmark_precedence(bookmark_precedence):   
     """Validate 'bookmark_precedence' configuration value""" 
     if not isinstance(bookmark_precedence, list):
@@ -127,7 +131,9 @@ def validate_bookmark_precedence(bookmark_precedence):
             f"Only the following values are allowed: {list(allowed_precedence_keys)}"
         )
 
+
 def generate_config(args_config):
+    """Create and validate config object from provided args."""
     config = {
         # Add required parameters
         'topic': args_config['topic'],
@@ -135,6 +141,7 @@ def generate_config(args_config):
         'bootstrap_servers': args_config['bootstrap_servers'],
 
         # Add optional parameters with defaults
+        'client_id': args_config.get('client_id', os.getenv("TAP_KAFKA_CLIENT_ID")),
         'primary_keys': args_config.get('primary_keys', {}),
         'use_message_key': args_config.get('use_message_key', True),
         'initial_start_time': args_config.get('initial_start_time', DEFAULT_INITIAL_START_TIME),
