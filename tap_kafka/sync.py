@@ -279,11 +279,13 @@ def bookmarked_partition_offset(consumer, topic: str, partition_bookmark: dict, 
     except KeyError:
         raise InvalidBookmarkException(f"Invalid bookmark. One or more bookmark entries using invalid type(s).")
 
+
 def partition_by_offset(consumer, topic: str, partition_bookmark: dict) -> confluent_kafka.TopicPartition:
     """Create a Kafka TopicPartition object from a bookmark's offset"""
     LOGGER.info(f"Partition [{partition_bookmark['partition']}] found in bookmark - setting offset to '{partition_bookmark['offset']}'")
     partition = confluent_kafka.TopicPartition(topic, partition_bookmark['partition'], partition_bookmark['offset'])
     return partition
+
 
 def partition_by_timestamp(consumer, topic: str, partition_bookmark: dict) -> confluent_kafka.TopicPartition:
     """Create a Kafka TopicPartition object from a bookmark's timestamp"""
@@ -294,6 +296,7 @@ def partition_by_timestamp(consumer, topic: str, partition_bookmark: dict) -> co
     partition = consumer.offsets_for_times([partition])[0]
     return partition
 
+
 def partition_by_starttime(consumer, topic: str, partition_bookmark: dict) -> confluent_kafka.TopicPartition:
     """Create a Kafka TopicPartition object from a bookmark's start_time"""
     start_time = partition_bookmark['start_time']
@@ -303,10 +306,13 @@ def partition_by_starttime(consumer, topic: str, partition_bookmark: dict) -> co
     partition = consumer.offsets_for_times([partition])[0]
     return partition
 
+
 def get_bookmark_comment(kafka_config) -> str:
+    """Create comment for bookmark."""
     bookmark_precedence = kafka_config['bookmark_precedence']
     bookmark_precedence_str = ", ".join(bookmark_precedence)
     return f'order of precedence : {bookmark_precedence_str}; only one will be used'
+
 
 def set_partition_offsets(consumer, partitions, kafka_config, state = {}):
     """Setting offsets to bookmarked state"""
@@ -325,28 +331,30 @@ def set_partition_offsets(consumer, partitions, kafka_config, state = {}):
 
     for partition in partitions:
         found_in_bookmark = False
+
+        low_offset, high_offset = consumer.get_watermark_offsets(partition)
+        LOGGER.info(f"Partition [{partition.partition}] watermarks : [{low_offset},{high_offset}]")
+
         for bookmark in bookmarked_partitions:
             if partition.partition == bookmarked_partitions[bookmark]['partition']:
                 partition = bookmarked_partition_offset(consumer, topic, bookmarked_partitions[bookmark], bookmark_precedence)
-                found_in_bookmark = True
+                found_in_bookmark = partition.offset >= low_offset and partition.offset <= high_offset
 
         if not found_in_bookmark:
+            LOGGER.info(f"Partition [{partition.partition}] not found/valid in bookmark - setting offset to '{initial_start_time}'")
             if initial_start_time == 'beginning':
-                LOGGER.info(f"Partition [{partition.partition}] not found in bookmark - setting offset to 'beginning'")
-                partition.offset = consumer.get_watermark_offsets(partition)[0]
+                partition.offset = low_offset
             elif initial_start_time == 'earliest':
-                LOGGER.info(f"Partition [{partition.partition}] not found in bookmark - setting offset to 'earliest'")
                 partition = consumer.committed([partition])[0]
-                partition.offset = max(partition.offset, consumer.get_watermark_offsets(partition)[0])
+                partition.offset = max(partition.offset, low_offset)
             elif initial_start_time == 'latest':
-                LOGGER.info(f"Partition [{partition.partition}] not found in bookmark - setting offset to 'latest'")
-                partition.offset = consumer.get_watermark_offsets(partition)[1] - 1
+                partition.offset = high_offset - 1
             elif initial_start_time is not None:
                 epoch = iso_timestamp_to_epoch(initial_start_time)
-                LOGGER.info(f"Partition [{partition.partition}] not found in bookmark - setting offset to initial_start_time '{initial_start_time}' ({epoch})")
+                LOGGER.info(f"'{initial_start_time}' = ({epoch})")
                 partition.offset = epoch
                 partition = consumer.offsets_for_times([partition])[0]
-                partition.offset = max(partition.offset, consumer.get_watermark_offsets(partition)[0])
+                partition.offset = max(partition.offset, low_offset)
 
         partitions_to_set.append(partition)
 
