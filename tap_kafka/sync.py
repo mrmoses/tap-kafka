@@ -22,7 +22,7 @@ from tap_kafka.serialization.protobuf import ProtobufDictDeserializer
 from tap_kafka.serialization.protobuf import proto_to_message_type
 from tap_kafka.defaults import DEFAULT_BOOKMARK_PRECEDENCE
 
-LOGGER = singer.get_logger('tap_kafka')
+LOGGER = singer.get_logger()
 
 LOG_MESSAGES_PERIOD = 5000  # Print log messages to stderr after every nth messages
 SEND_STATE_PERIOD = 5000    # Update and send bookmark to stdout after nth messages

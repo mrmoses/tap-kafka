@@ -12,7 +12,7 @@ from tap_kafka import common
 
 from .errors import InvalidTimestampException, InvalidConfigException, DiscoveryException
 
-LOGGER = singer.get_logger('tap_kafka')
+LOGGER = singer.get_logger()
 
 REQUIRED_CONFIG_KEYS = [
     'bootstrap_servers',
