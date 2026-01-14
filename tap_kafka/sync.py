@@ -424,6 +424,7 @@ def read_kafka_messages(consumer, kafka_config, state):
     use_message_key = kafka_config['use_message_key']
     max_runtime_ms = kafka_config['max_runtime_ms']
     commit_interval_ms = kafka_config['commit_interval_ms']
+    poll_empty_retry_wait_ms = kafka_config['poll_empty_retry_wait_ms']
     consumed_messages = 0
     last_consumed_ts = 0
     start_time = 0
@@ -435,15 +436,35 @@ def read_kafka_messages(consumer, kafka_config, state):
     # Send singer ACTIVATE message
     send_activate_version_message(state, topic)
 
+    max_runtime_s = max_runtime_ms / 1000
+    start_time = time.time()
     while True:
+        time_elapsed = (time.time() - start_time)
+
+        # Stop consuming more messages if max runtime exceeded
+        if time_elapsed >= max_runtime_s:
+            LOGGER.info('Max runtime %s seconds exceeded. Stop consuming more messages.', max_runtime_s)
+            break
+
         polled_message = consumer.poll(timeout=kafka_config['consumer_timeout_ms'] / 1000)
 
-        # Stop consuming more messages if no new message and consumer_timeout_ms exceeded
         if polled_message is None:
-            LOGGER.info('No new message received in %s ms. Stop consuming more messages.',
-                        kafka_config["consumer_timeout_ms"]
-                        )
-            break
+            LOGGER.info('No new message received in %s ms.', kafka_config["consumer_timeout_ms"])
+            if poll_empty_retry_wait_ms < 0:
+                LOGGER.info('Stop consuming more messages (no retry wait).')
+                break
+
+            # Calculate how much runtime is left so we don't over-sleep
+            time_remaining = max_runtime_s - (time.time() - start_time)
+            sleep_time_s = min(poll_empty_retry_wait_ms / 1000.0, time_remaining)
+            
+            if sleep_time_s <= 0:
+                LOGGER.info('Max runtime %s seconds exceeded. Stop consuming more messages.', max_runtime_s)
+                break
+               
+            LOGGER.info('Waiting %s ms for more messages.', poll_empty_retry_wait_ms)
+            time.sleep(sleep_time_s)
+            continue
 
         message = polled_message
         LOGGER.debug("topic=%s partition=%s offset=%s timestamp=%s key=%s value=<HIDDEN>" % (message.topic(),
@@ -451,10 +472,6 @@ def read_kafka_messages(consumer, kafka_config, state):
                                                                                              message.offset(),
                                                                                              message.timestamp(),
                                                                                              message.key()))
-
-        # Initialise the start time after the first message
-        if not start_time:
-            start_time = time.time()
 
         # Initialise the last_commit_time after the first message
         if not last_commit_time:
@@ -482,12 +499,6 @@ def read_kafka_messages(consumer, kafka_config, state):
         if consumed_messages % SEND_STATE_PERIOD == 0:
             LOGGER.debug("%d messages consumed... Sending latest state: %s", consumed_messages, state)
             singer.write_message(singer.StateMessage(value=copy.deepcopy(state)))
-
-        # Stop consuming more messages if max runtime exceeded
-        max_runtime_s = max_runtime_ms / 1000
-        if now >= (start_time + max_runtime_s):
-            LOGGER.info(f'Max runtime {max_runtime_s} seconds exceeded. Stop consuming more messages.')
-            break
 
     # Update bookmark and send state at the last time
     if message:
