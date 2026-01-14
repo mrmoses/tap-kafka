@@ -285,8 +285,9 @@ def bookmarked_partition_offset(consumer, topic: str, partition_bookmark: dict, 
 
 def partition_by_offset(consumer, topic: str, partition_bookmark: dict) -> confluent_kafka.TopicPartition:
     """Create a Kafka TopicPartition object from a bookmark's offset"""
-    LOGGER.info(f"Partition [{partition_bookmark['partition']}] found in bookmark - setting offset to '{partition_bookmark['offset']}'")
-    partition = confluent_kafka.TopicPartition(topic, partition_bookmark['partition'], partition_bookmark['offset'])
+    next_offset = partition_bookmark['offset'] + 1 # add 1 to start from the next unconsumed message
+    LOGGER.info(f"Partition [{partition_bookmark['partition']}] found in bookmark - setting offset to '{next_offset}' (bookmark was {partition_bookmark['offset']})")
+    partition = confluent_kafka.TopicPartition(topic, partition_bookmark['partition'], next_offset)
     return partition
 
 
@@ -341,7 +342,13 @@ def set_partition_offsets(consumer, partitions, kafka_config, state = {}):
         for bookmark in bookmarked_partitions:
             if partition.partition == bookmarked_partitions[bookmark]['partition']:
                 partition = bookmarked_partition_offset(consumer, topic, bookmarked_partitions[bookmark], bookmark_precedence)
-                found_in_bookmark = partition.offset >= low_offset and partition.offset <= high_offset
+                # Bookmark is valid if within range, or caught up (at or beyond high_offset)
+                if partition.offset >= low_offset:
+                    found_in_bookmark = True
+                    # If caught up (at or beyond high_offset), just keep the bookmark offset
+                    # The consumer will wait for new messages at this offset
+                    if partition.offset >= high_offset:
+                        LOGGER.info(f"Partition [{partition.partition}] bookmark offset {partition.offset} is at/beyond high_offset {high_offset}. Caught up, will wait for new messages.")
 
         if not found_in_bookmark:
             LOGGER.info(f"Partition [{partition.partition}] not found/valid in bookmark - setting offset to '{initial_start_time}'")
@@ -356,8 +363,15 @@ def set_partition_offsets(consumer, partitions, kafka_config, state = {}):
                 epoch = iso_timestamp_to_epoch(initial_start_time)
                 LOGGER.info(f"'{initial_start_time}' = ({epoch})")
                 partition.offset = epoch
+
+                # if there are no messages at or after the initial_start_time timestamp, this returns -1
                 partition = consumer.offsets_for_times([partition])[0]
-                partition.offset = max(partition.offset, low_offset)
+                if partition.offset < 0:
+                    LOGGER.warning(f"Partition [{partition.partition}] has no messages at or after timestamp {initial_start_time} ({epoch}). Using latest offset.")
+                    partition.offset = high_offset
+                else:
+                    # Ensure offset is not less than low_offset
+                    partition.offset = max(partition.offset, low_offset)
 
         partitions_to_set.append(partition)
 
