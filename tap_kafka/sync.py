@@ -219,7 +219,7 @@ def consume_kafka_message(message, topic, primary_keys, use_message_key):
 def select_kafka_partitions(consumer, kafka_config) -> List[confluent_kafka.TopicPartition]:
     """Select partitions in topic"""
 
-    LOGGER.info(f"Selecting partitions in topic '{kafka_config['topic']}'")
+    LOGGER.info("Selecting partitions in topic '%s'", kafka_config['topic'])
 
     topic = kafka_config['topic']
     partition_ids_requested = kafka_config['partitions']
@@ -228,7 +228,7 @@ def select_kafka_partitions(consumer, kafka_config) -> List[confluent_kafka.Topi
         topic_meta = consumer.list_topics(topic, timeout=kafka_config['max_poll_interval_ms'] / 1000)
         partition_meta = topic_meta.topics[topic].partitions
     except KafkaException:
-        LOGGER.exception(f"Unable to list partitions in topic '{topic}'", exc_info=True)
+        LOGGER.exception("Unable to list partitions in topic '%s'", topic, exc_info=True)
         raise
 
     if not partition_meta:
@@ -241,14 +241,14 @@ def select_kafka_partitions(consumer, kafka_config) -> List[confluent_kafka.Topi
 
     if not partition_ids_requested:
         partition_ids = partition_ids_available
-        LOGGER.info(f"Requesting all partitions in topic '{topic}'")
+        LOGGER.info("Requesting all partitions in topic '%s'", topic)
     else:
-        LOGGER.info(f"Requesting partitions {partition_ids_requested} in topic '{topic}'")
+        LOGGER.info("Requesting partitions %s in topic '%s'", partition_ids_requested, topic)
         partition_ids = list(set(partition_ids_requested).intersection(partition_ids_available))
         partition_ids_not_available = list(set(partition_ids_requested).difference(partition_ids_available))
-        if partition_ids_not_available: LOGGER.warning(f"Partitions {partition_ids_not_available} not available in topic '{topic}'")
+        if partition_ids_not_available: LOGGER.warning("Partitions %s not available in topic '%s'", partition_ids_not_available, topic)
 
-    LOGGER.info(f"Selecting partitions {partition_ids} in topic '{topic}'")
+    LOGGER.info("Selecting partitions %s in topic '%s'", partition_ids, topic)
 
     partitions = []
     for partition_id in partition_ids:
@@ -467,11 +467,11 @@ def read_kafka_messages(consumer, kafka_config, state):
             continue
 
         message = polled_message
-        LOGGER.debug("topic=%s partition=%s offset=%s timestamp=%s key=%s value=<HIDDEN>" % (message.topic(),
-                                                                                             message.partition(),
-                                                                                             message.offset(),
-                                                                                             message.timestamp(),
-                                                                                             message.key()))
+        LOGGER.debug("topic=%s partition=%s offset=%s timestamp=%s key=%s value=<HIDDEN>", message.topic(),
+                                                                                           message.partition(),
+                                                                                           message.offset(),
+                                                                                           message.timestamp(),
+                                                                                           message.key())
 
         # Initialise the last_commit_time after the first message
         if not last_commit_time:
@@ -492,7 +492,8 @@ def read_kafka_messages(consumer, kafka_config, state):
         # Log message stats periodically every LOG_MESSAGES_PERIOD
         consumed_messages += 1
         if consumed_messages % LOG_MESSAGES_PERIOD == 0:
-            LOGGER.info("%d messages consumed... Last consumed timestamp: %f Partition: %d Offset: %d",
+            last_consumed_ts = message.timestamp()[1]
+            LOGGER.info("%d messages consumed... Last consumed timestamp: %d Partition: %d Offset: %d",
                         consumed_messages, last_consumed_ts, message.partition(), message.offset())
 
         # Send state message periodically every SEND_STATE_PERIOD
