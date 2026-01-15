@@ -163,9 +163,8 @@ The tap will write bookmarks to stdout which can be captured and passed as an op
 
 ## Create local dev container
 ```
-docker run --name pipelinewise-tap-kafka -it --entrypoint bash -v ${pwd}:/project python:3.9-slim
+docker run --name pipelinewise-tap-kafka -it --entrypoint bash -v ${pwd}:/project python:3.14-slim
 cd project/
-pip install pipelinewise-tap-kafka
 pip install --upgrade pip
 pip install -e .[test]
 pip install .
