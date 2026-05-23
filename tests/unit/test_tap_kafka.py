@@ -214,6 +214,7 @@ class TestSync(unittest.TestCase):
         # Partitions are in a list
         self.assertIsNone(tap_kafka.validate_config({'topic': 'my_topic',
                                                      'partitions': [1, 2, 2, 2],
+                                                     'bookmark_precedence': [],
                                                      'group_id': 'my_group_id',
                                                      'bootstrap_servers': 'server1,server2,server3',
                                                      'message_format': 'json',
@@ -222,6 +223,7 @@ class TestSync(unittest.TestCase):
         # Initial start time is a reserved word (beginning)
         self.assertIsNone(tap_kafka.validate_config({'topic': 'my_topic',
                                                      'partitions': [],
+                                                     'bookmark_precedence': [],
                                                      'group_id': 'my_group_id',
                                                      'bootstrap_servers': 'server1,server2,server3',
                                                      'message_format': 'json',
@@ -230,6 +232,7 @@ class TestSync(unittest.TestCase):
         # Initial start time is a reserved word (latest)
         self.assertIsNone(tap_kafka.validate_config({'topic': 'my_topic',
                                                      'partitions': [],
+                                                     'bookmark_precedence': [],
                                                      'group_id': 'my_group_id',
                                                      'bootstrap_servers': 'server1,server2,server3',
                                                      'message_format': 'json',
@@ -238,6 +241,7 @@ class TestSync(unittest.TestCase):
         # Initial start time is a reserved word (earliset)
         self.assertIsNone(tap_kafka.validate_config({'topic': 'my_topic',
                                                      'partitions': [],
+                                                     'bookmark_precedence': [],
                                                      'group_id': 'my_group_id',
                                                      'bootstrap_servers': 'server1,server2,server3',
                                                      'message_format': 'json',
@@ -246,6 +250,7 @@ class TestSync(unittest.TestCase):
         # Initial start time is an ISO timestamp
         self.assertIsNone(tap_kafka.validate_config({'topic': 'my_topic',
                                                      'partitions': [],
+                                                     'bookmark_precedence': [],
                                                      'group_id': 'my_group_id',
                                                      'bootstrap_servers': 'server1,server2,server3',
                                                      'message_format': 'json',
@@ -255,6 +260,7 @@ class TestSync(unittest.TestCase):
         with self.assertRaises(InvalidConfigException):
             tap_kafka.validate_config({'topic': 'my_topic',
                                                      'partitions': [],
+                                                     'bookmark_precedence': [],
                                                      'group_id': 'my_group_id',
                                                      'bootstrap_servers': 'server1,server2,server3',
                                                      'message_format': 'json',
@@ -264,6 +270,7 @@ class TestSync(unittest.TestCase):
         with self.assertRaises(InvalidConfigException):
             tap_kafka.validate_config({'topic': 'my_topic',
                                        'partitions': [],
+                                       'bookmark_precedence': [],
                                        'group_id': 'my_group_id',
                                        'bootstrap_servers': 'server1,server2,server3',
                                        'message_format': 'protobuf',
@@ -271,6 +278,7 @@ class TestSync(unittest.TestCase):
 
         self.assertIsNone(tap_kafka.validate_config({'topic': 'my_topic',
                                                      'partitions': [],
+                                                     'bookmark_precedence': [],
                                                      'group_id': 'my_group_id',
                                                      'bootstrap_servers': 'server1,server2,server3',
                                                      'message_format': 'protobuf',
