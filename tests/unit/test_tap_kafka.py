@@ -867,11 +867,12 @@ class TestSync(unittest.TestCase):
         consumer = KafkaConsumerMock(fake_messages=[])
         partition_bookmark = {'partition': 0, 'offset': 1234, 'timestamp': 1638132327000}
 
-        # By default TopicPartition offset needs to be bookmarked offset
+        # By default TopicPartition offset needs to be bookmarked offset + 1
+        # (start at the next unconsumed message rather than re-reading the bookmark)
         topic_partition = sync.bookmarked_partition_offset(consumer, topic, partition_bookmark)
         self.assertEqual(topic_partition.topic, topic)
         self.assertEqual(topic_partition.partition, 0)
-        self.assertEqual(topic_partition.offset, 1234)
+        self.assertEqual(topic_partition.offset, 1235)
 
         partition_bookmark = {'partition': 0, 'timestamp': 1638132327000}
 
