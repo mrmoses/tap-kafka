@@ -7,11 +7,12 @@ with open("README.md", "r") as fh:
 
 setup(name='pipelinewise-tap-kafka',
       version='8.2.1',
-      description='Singer.io tap for extracting data from Kafka topic - PipelineWise compatible',
+      description='Singer.io tap for extracting data from a Kafka topic',
       long_description=long_description,
       long_description_content_type='text/markdown',
       author='TransferWise',
-      url='https://github.com/transferwise/pipelinewise-tap-kafka',
+      maintainer='AccuLynx',
+      url='https://github.com/mrmoses/pipelinewise-tap-kafka',
       classifiers=[
           'License :: OSI Approved :: GNU Affero General Public License v3',
           'Programming Language :: Python :: 3 :: Only'

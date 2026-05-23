@@ -1,10 +1,3 @@
-# Notice
-To better serve Wise business and customer needs, the PipelineWise codebase needs to shrink.
-We have made the difficult decision that, going forward many components of PipelineWise will be removed or incorporated in the main repo.
-The last version before this decision is [v0.64.1](https://github.com/transferwise/pipelinewise/tree/v0.64.1)
-
-We thank all in the open-source community, that over the past 6 years, have helped to make PipelineWise a robust product for heterogeneous replication of many many Terabytes, daily
-
 # pipelinewise-tap-kafka
 
 [![PyPI version](https://badge.fury.io/py/pipelinewise-tap-kafka.svg)](https://badge.fury.io/py/pipelinewise-tap-kafka)
@@ -13,13 +6,9 @@ We thank all in the open-source community, that over the past 6 years, have help
 
 This is a [Singer](https://singer.io) tap that reads data from Kafka topic and produces JSON-formatted data following the [Singer spec](https://github.com/singer-io/getting-started/blob/master/SPEC.md).
 
-This is a [PipelineWise](https://transferwise.github.io/pipelinewise) compatible target connector.
-
 ## How to use it
 
-The recommended method of running this tap is to use it from [PipelineWise](https://transferwise.github.io/pipelinewise). When running it from PipelineWise you don't need to configure this tap with JSON files and most of things are automated. Please check the related documentation at [Kafka](https://transferwise.github.io/pipelinewise/connectors/taps/kafka.html)
-
-If you want to run this [Singer Tap](https://singer.io) independently please read further.
+This tap is a standard [Singer Tap](https://singer.io). It can be run directly via the Singer CLI, or invoked as a plugin from an orchestrator like [Meltano](https://meltano.com/) that handles config generation and state management.
 
 ## Install and Run
 
