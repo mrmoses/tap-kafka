@@ -22,7 +22,7 @@ from tap_kafka.serialization.protobuf import ProtobufDictDeserializer
 from tap_kafka.serialization.protobuf import proto_to_message_type
 from tap_kafka.defaults import DEFAULT_BOOKMARK_PRECEDENCE
 
-LOGGER = singer.get_logger('tap_kafka')
+LOGGER = singer.get_logger()
 
 LOG_MESSAGES_PERIOD = 5000  # Print log messages to stderr after every nth messages
 SEND_STATE_PERIOD = 5000    # Update and send bookmark to stdout after nth messages
@@ -219,7 +219,7 @@ def consume_kafka_message(message, topic, primary_keys, use_message_key):
 def select_kafka_partitions(consumer, kafka_config) -> List[confluent_kafka.TopicPartition]:
     """Select partitions in topic"""
 
-    LOGGER.info(f"Selecting partitions in topic '{kafka_config['topic']}'")
+    LOGGER.info("Selecting partitions in topic '%s'", kafka_config['topic'])
 
     topic = kafka_config['topic']
     partition_ids_requested = kafka_config['partitions']
@@ -228,7 +228,7 @@ def select_kafka_partitions(consumer, kafka_config) -> List[confluent_kafka.Topi
         topic_meta = consumer.list_topics(topic, timeout=kafka_config['max_poll_interval_ms'] / 1000)
         partition_meta = topic_meta.topics[topic].partitions
     except KafkaException:
-        LOGGER.exception(f"Unable to list partitions in topic '{topic}'", exc_info=True)
+        LOGGER.exception("Unable to list partitions in topic '%s'", topic, exc_info=True)
         raise
 
     if not partition_meta:
@@ -241,14 +241,14 @@ def select_kafka_partitions(consumer, kafka_config) -> List[confluent_kafka.Topi
 
     if not partition_ids_requested:
         partition_ids = partition_ids_available
-        LOGGER.info(f"Requesting all partitions in topic '{topic}'")
+        LOGGER.info("Requesting all partitions in topic '%s'", topic)
     else:
-        LOGGER.info(f"Requesting partitions {partition_ids_requested} in topic '{topic}'")
+        LOGGER.info("Requesting partitions %s in topic '%s'", partition_ids_requested, topic)
         partition_ids = list(set(partition_ids_requested).intersection(partition_ids_available))
         partition_ids_not_available = list(set(partition_ids_requested).difference(partition_ids_available))
-        if partition_ids_not_available: LOGGER.warning(f"Partitions {partition_ids_not_available} not available in topic '{topic}'")
+        if partition_ids_not_available: LOGGER.warning("Partitions %s not available in topic '%s'", partition_ids_not_available, topic)
 
-    LOGGER.info(f"Selecting partitions {partition_ids} in topic '{topic}'")
+    LOGGER.info("Selecting partitions %s in topic '%s'", partition_ids, topic)
 
     partitions = []
     for partition_id in partition_ids:
@@ -285,8 +285,9 @@ def bookmarked_partition_offset(consumer, topic: str, partition_bookmark: dict, 
 
 def partition_by_offset(consumer, topic: str, partition_bookmark: dict) -> confluent_kafka.TopicPartition:
     """Create a Kafka TopicPartition object from a bookmark's offset"""
-    LOGGER.info(f"Partition [{partition_bookmark['partition']}] found in bookmark - setting offset to '{partition_bookmark['offset']}'")
-    partition = confluent_kafka.TopicPartition(topic, partition_bookmark['partition'], partition_bookmark['offset'])
+    next_offset = partition_bookmark['offset'] + 1 # add 1 to start from the next unconsumed message
+    LOGGER.info(f"Partition [{partition_bookmark['partition']}] found in bookmark - setting offset to '{next_offset}' (bookmark was {partition_bookmark['offset']})")
+    partition = confluent_kafka.TopicPartition(topic, partition_bookmark['partition'], next_offset)
     return partition
 
 
@@ -341,7 +342,13 @@ def set_partition_offsets(consumer, partitions, kafka_config, state = {}):
         for bookmark in bookmarked_partitions:
             if partition.partition == bookmarked_partitions[bookmark]['partition']:
                 partition = bookmarked_partition_offset(consumer, topic, bookmarked_partitions[bookmark], bookmark_precedence)
-                found_in_bookmark = partition.offset >= low_offset and partition.offset <= high_offset
+                # Bookmark is valid if within range, or caught up (at or beyond high_offset)
+                if partition.offset >= low_offset:
+                    found_in_bookmark = True
+                    # If caught up (at or beyond high_offset), just keep the bookmark offset
+                    # The consumer will wait for new messages at this offset
+                    if partition.offset >= high_offset:
+                        LOGGER.info(f"Partition [{partition.partition}] bookmark offset {partition.offset} is at/beyond high_offset {high_offset}. Caught up, will wait for new messages.")
 
         if not found_in_bookmark:
             LOGGER.info(f"Partition [{partition.partition}] not found/valid in bookmark - setting offset to '{initial_start_time}'")
@@ -356,8 +363,15 @@ def set_partition_offsets(consumer, partitions, kafka_config, state = {}):
                 epoch = iso_timestamp_to_epoch(initial_start_time)
                 LOGGER.info(f"'{initial_start_time}' = ({epoch})")
                 partition.offset = epoch
+
+                # if there are no messages at or after the initial_start_time timestamp, this returns -1
                 partition = consumer.offsets_for_times([partition])[0]
-                partition.offset = max(partition.offset, low_offset)
+                if partition.offset < 0:
+                    LOGGER.warning(f"Partition [{partition.partition}] has no messages at or after timestamp {initial_start_time} ({epoch}). Using latest offset.")
+                    partition.offset = high_offset
+                else:
+                    # Ensure offset is not less than low_offset
+                    partition.offset = max(partition.offset, low_offset)
 
         partitions_to_set.append(partition)
 
@@ -410,6 +424,7 @@ def read_kafka_messages(consumer, kafka_config, state):
     use_message_key = kafka_config['use_message_key']
     max_runtime_ms = kafka_config['max_runtime_ms']
     commit_interval_ms = kafka_config['commit_interval_ms']
+    poll_empty_retry_wait_ms = kafka_config['poll_empty_retry_wait_ms']
     consumed_messages = 0
     last_consumed_ts = 0
     start_time = 0
@@ -421,26 +436,42 @@ def read_kafka_messages(consumer, kafka_config, state):
     # Send singer ACTIVATE message
     send_activate_version_message(state, topic)
 
+    max_runtime_s = max_runtime_ms / 1000
+    start_time = time.time()
     while True:
-        polled_message = consumer.poll(timeout=kafka_config['consumer_timeout_ms'] / 1000)
+        time_elapsed = (time.time() - start_time)
 
-        # Stop consuming more messages if no new message and consumer_timeout_ms exceeded
-        if polled_message is None:
-            LOGGER.info('No new message received in %s ms. Stop consuming more messages.',
-                        kafka_config["consumer_timeout_ms"]
-                        )
+        # Stop consuming more messages if max runtime exceeded
+        if time_elapsed >= max_runtime_s:
+            LOGGER.info('Max runtime %s seconds exceeded. Stop consuming more messages.', max_runtime_s)
             break
 
-        message = polled_message
-        LOGGER.debug("topic=%s partition=%s offset=%s timestamp=%s key=%s value=<HIDDEN>" % (message.topic(),
-                                                                                             message.partition(),
-                                                                                             message.offset(),
-                                                                                             message.timestamp(),
-                                                                                             message.key()))
+        polled_message = consumer.poll(timeout=kafka_config['consumer_timeout_ms'] / 1000)
 
-        # Initialise the start time after the first message
-        if not start_time:
-            start_time = time.time()
+        if polled_message is None:
+            LOGGER.info('No new message received in %s ms.', kafka_config["consumer_timeout_ms"])
+            if poll_empty_retry_wait_ms < 0:
+                LOGGER.info('Stop consuming more messages (no retry wait).')
+                break
+
+            # Calculate how much runtime is left so we don't over-sleep
+            time_remaining = max_runtime_s - (time.time() - start_time)
+            sleep_time_s = min(poll_empty_retry_wait_ms / 1000.0, time_remaining)
+            
+            if sleep_time_s <= 0:
+                LOGGER.info('Max runtime %s seconds exceeded. Stop consuming more messages.', max_runtime_s)
+                break
+               
+            LOGGER.info('Waiting %s ms for more messages.', poll_empty_retry_wait_ms)
+            time.sleep(sleep_time_s)
+            continue
+
+        message = polled_message
+        LOGGER.debug("topic=%s partition=%s offset=%s timestamp=%s key=%s value=<HIDDEN>", message.topic(),
+                                                                                           message.partition(),
+                                                                                           message.offset(),
+                                                                                           message.timestamp(),
+                                                                                           message.key())
 
         # Initialise the last_commit_time after the first message
         if not last_commit_time:
@@ -461,19 +492,14 @@ def read_kafka_messages(consumer, kafka_config, state):
         # Log message stats periodically every LOG_MESSAGES_PERIOD
         consumed_messages += 1
         if consumed_messages % LOG_MESSAGES_PERIOD == 0:
-            LOGGER.info("%d messages consumed... Last consumed timestamp: %f Partition: %d Offset: %d",
+            last_consumed_ts = message.timestamp()[1]
+            LOGGER.info("%d messages consumed... Last consumed timestamp: %d Partition: %d Offset: %d",
                         consumed_messages, last_consumed_ts, message.partition(), message.offset())
 
         # Send state message periodically every SEND_STATE_PERIOD
         if consumed_messages % SEND_STATE_PERIOD == 0:
             LOGGER.debug("%d messages consumed... Sending latest state: %s", consumed_messages, state)
             singer.write_message(singer.StateMessage(value=copy.deepcopy(state)))
-
-        # Stop consuming more messages if max runtime exceeded
-        max_runtime_s = max_runtime_ms / 1000
-        if now >= (start_time + max_runtime_s):
-            LOGGER.info(f'Max runtime {max_runtime_s} seconds exceeded. Stop consuming more messages.')
-            break
 
     # Update bookmark and send state at the last time
     if message:

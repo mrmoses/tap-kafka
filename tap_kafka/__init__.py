@@ -12,7 +12,7 @@ from tap_kafka import common
 
 from .errors import InvalidTimestampException, InvalidConfigException, DiscoveryException
 
-LOGGER = singer.get_logger('tap_kafka')
+LOGGER = singer.get_logger()
 
 REQUIRED_CONFIG_KEYS = [
     'bootstrap_servers',
@@ -31,6 +31,7 @@ from .defaults import (
     DEFAULT_HEARTBEAT_INTERVAL_MS,
     DEFAULT_MAX_POLL_INTERVAL_MS,
     DEFAULT_MAX_POLL_RECORDS,
+    DEFAULT_POLL_EMPTY_RETRY_WAIT_MS,
     DEFAULT_MESSAGE_FORMAT,
     DEFAULT_PROTO_SCHEMA,
     DEFAULT_PROTO_CLASSES_DIR,
@@ -154,6 +155,7 @@ def generate_config(args_config):
         'heartbeat_interval_ms': args_config.get('heartbeat_interval_ms', DEFAULT_HEARTBEAT_INTERVAL_MS),
         'max_poll_records': args_config.get('max_poll_records', DEFAULT_MAX_POLL_RECORDS),
         'max_poll_interval_ms': args_config.get('max_poll_interval_ms', DEFAULT_MAX_POLL_INTERVAL_MS),
+        'poll_empty_retry_wait_ms': args_config.get('poll_empty_retry_wait_ms', DEFAULT_POLL_EMPTY_RETRY_WAIT_MS),
         'message_format': args_config.get('message_format', DEFAULT_MESSAGE_FORMAT),
         'proto_schema': args_config.get('proto_schema', DEFAULT_PROTO_SCHEMA),
         'proto_classes_dir': args_config.get('proto_classes_dir', DEFAULT_PROTO_CLASSES_DIR),
