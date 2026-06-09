@@ -61,5 +61,5 @@ services:
 
 networks:
   tap_kafka_network:
-    name: pipelinewise_tap_kafka_network
+    name: tap_kafka_network
     driver: bridge

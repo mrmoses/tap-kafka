@@ -1,10 +1,8 @@
-# pipelinewise-tap-kafka
+# tap-kafka
 
-[![PyPI version](https://badge.fury.io/py/pipelinewise-tap-kafka.svg)](https://badge.fury.io/py/pipelinewise-tap-kafka)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pipelinewise-tap-kafka.svg)](https://pypi.org/project/pipelinewise-tap-kafka/)
-[![License: MIT](https://img.shields.io/badge/License-GPLv3-yellow.svg)](https://opensource.org/licenses/GPL-3.0)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-This is a [Singer](https://singer.io) tap that reads data from Kafka topic and produces JSON-formatted data following the [Singer spec](https://github.com/singer-io/getting-started/blob/master/SPEC.md).
+This is a [Singer](https://singer.io) tap that reads data from Kafka topic and produces JSON-formatted data following the [Singer spec](https://github.com/singer-io/getting-started/blob/master/docs/SPEC.md).
 
 ## How to use it
 
@@ -20,7 +18,7 @@ It's recommended to use a virtualenv:
 
 ```bash
   python3 -m venv venv
-  pip install pipelinewise-tap-kafka
+  pip install tap-kafka
 ```
 
 or
@@ -30,6 +28,25 @@ or
   . venv/bin/activate
   pip install --upgrade pip
   pip install .
+```
+
+Or to use Docker:
+```powershell
+# remove container if it already exists
+docker rm -f tap-kafka
+
+# create container and attach
+docker run --name tap-kafka -it --entrypoint bash -v ${pwd}:/project python:3.14
+cd project/
+pip install --upgrade pip
+pip install -e .[test]
+pip install .
+
+# start container and attach
+docker start tap-kafka -a
+
+# or attach (if its already running)
+docker attach tap-kafka
 ```
 
 ### Configuration
@@ -196,40 +213,6 @@ The tap will write bookmarks to stdout which can be captured and passed as an op
   pylint tap_kafka -d C,W,unexpected-keyword-arg,duplicate-code
 ```
 
-# Using local dev container
+## Credits / History
 
-## Create local dev container
-```
-# remove container if it already exists
-docker rm -f pipelinewise-tap-kafka
-
-docker run --name pipelinewise-tap-kafka -it --entrypoint bash -v ${pwd}:/project python:3.14-slim
-cd project/
-pip install --upgrade pip
-pip install -e .[test]
-pip install .
-```
-
-## Start local dev container (after it exists/is created)
-```
-# start and attach
-docker start pipelinewise-tap-kafka -a
-
-# or attach (if its already running)
-docker attach pipelinewise-tap-kafka
-```
-
-## Run the thing from in local dev container
-```
-cd project/
-
-# dump a Catalog to stdout
-tap-kafka --config config.json --discover
-
-# Capture the Catalog to file
-tap-kafka --config config.json --discover > catalog.json
-
-# run sync
-tap-kafka --config config.json --properties catalog.json
-tap-kafka --config config.json --properties catalog.json --state state.json
-```
+Originally developed by TransferWise as part of PipelineWise; now independently maintained.

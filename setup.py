@@ -5,14 +5,14 @@ from setuptools import setup
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-setup(name='pipelinewise-tap-kafka',
-      version='8.2.1',
+setup(name='tap-kafka',
+      version='9.0.0',
       description='Singer.io tap for extracting data from a Kafka topic',
       long_description=long_description,
       long_description_content_type='text/markdown',
       author='TransferWise',
-      maintainer='AccuLynx',
-      url='https://github.com/mrmoses/pipelinewise-tap-kafka',
+      maintainer='mrmoses',
+      url='https://github.com/mrmoses/tap-kafka',
       classifiers=[
           'License :: OSI Approved :: GNU Affero General Public License v3',
           'Programming Language :: Python :: 3 :: Only'

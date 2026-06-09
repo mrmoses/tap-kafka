@@ -1,5 +1,9 @@
-Unreleased
-----------
+9.0.0 (2026-06-08)
+------------------
+
+**Breaking changes**
+- Renamed the distribution package from `pipelinewise-tap-kafka` to `tap-kafka`. The console entry point remains `tap-kafka`.
+- Now independently maintained, forked from the archived PipelineWise upstream.
 
 **New config options**
 - `client_id`: optional `client.id` for the Kafka consumer; can be sourced from the `TAP_KAFKA_CLIENT_ID` env var.

@@ -1,4 +1,4 @@
-"""pipelinewise-tap-kafka"""
+"""tap-kafka"""
 import os
 import sys
 import json
