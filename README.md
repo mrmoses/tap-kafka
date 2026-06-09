@@ -27,7 +27,7 @@ or
   python3 -m venv venv
   . venv/bin/activate
   pip install --upgrade pip
-  pip install -e .[test]
+  pip install -e '.[test]'
 ```
 
 Or to use Docker:
@@ -39,7 +39,7 @@ docker rm -f tap-kafka
 docker run --name tap-kafka -it --entrypoint bash -v ${pwd}:/project python:3.14
 cd project/
 pip install --upgrade pip
-pip install -e .[test]
+pip install -e '.[test]'
 
 # start container and attach
 docker start tap-kafka -a
@@ -188,7 +188,7 @@ The tap will write bookmarks to stdout which can be captured and passed as an op
   python3 -m venv venv
   . venv/bin/activate
   pip install --upgrade pip
-  pip install -e .[test]
+  pip install -e '.[test]'
 ```
 
 2. To run unit tests:
@@ -208,7 +208,7 @@ The tap will write bookmarks to stdout which can be captured and passed as an op
   python3 -m venv venv
   . venv/bin/activate
   pip install --upgrade pip
-  pip install -e .[test]
+  pip install -e '.[test]'
   pylint tap_kafka -d C,W,unexpected-keyword-arg,duplicate-code
 ```
 
