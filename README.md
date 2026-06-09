@@ -27,7 +27,7 @@ or
   python3 -m venv venv
   . venv/bin/activate
   pip install --upgrade pip
-  pip install .
+  pip install -e .[test]
 ```
 
 Or to use Docker:
@@ -40,7 +40,6 @@ docker run --name tap-kafka -it --entrypoint bash -v ${pwd}:/project python:3.14
 cd project/
 pip install --upgrade pip
 pip install -e .[test]
-pip install .
 
 # start container and attach
 docker start tap-kafka -a
