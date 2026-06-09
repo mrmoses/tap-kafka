@@ -1,3 +1,28 @@
+9.0.0 (2026-06-08)
+------------------
+
+**Breaking changes**
+- Renamed the distribution package from `pipelinewise-tap-kafka` to `tap-kafka`. The console entry point remains `tap-kafka`.
+- Now independently maintained, forked from the archived PipelineWise upstream.
+
+**New config options**
+- `client_id`: optional `client.id` for the Kafka consumer; can be sourced from the `TAP_KAFKA_CLIENT_ID` env var.
+- `bookmark_precedence`: list controlling the order in which bookmark fields (`offset`, `timestamp`, `start_time`) are consulted on resume. Defaults to `["offset", "timestamp", "start_time"]`.
+- `poll_empty_retry_wait_ms`: when set to a positive value, the tap waits this many ms between empty polls and retries until `max_runtime_ms` is exhausted instead of stopping on the first empty poll. Default `-1` preserves the previous behavior.
+- `security_protocol`, `sasl_mechanisms`, `sasl_username`, `sasl_password`: SASL authentication settings, applied only when both `sasl_username` and `sasl_password` are set. Defaults: `SASL_SSL` / `PLAIN`. Username and password can also be sourced from `TAP_KAFKA_SASL_USERNAME` / `TAP_KAFKA_SASL_PASSWORD` env vars.
+
+**Behavior changes**
+- On resume, the tap now starts consuming at `bookmark.offset + 1` so the last processed message is not delivered twice.
+- Bookmarks are validated against the partition's current low watermark. Bookmarks below the low watermark fall back to `initial_start_time`. Bookmarks at or beyond the high watermark are treated as caught up and kept.
+- Future ISO `initial_start_time` values: when no messages exist at or after the timestamp, the tap starts at the partition's high watermark instead of clamping to the low watermark.
+
+**Dependency updates**
+- Replace deprecated `pipelinewise-singer-python` with `singer-python`.
+- Bump `confluent-kafka[protobuf]` to `2.13.*`.
+- Bump `grpcio-tools` to `1.76.*`, `orjson` to `3.11.*`.
+- Bump test dependencies (`pytest` 9.0, `pylint` 4.0, `pytest-cov` 7.0).
+- Python 3.14 supported.
+
 8.2.1 (2023-11-28)
 ------------------
 

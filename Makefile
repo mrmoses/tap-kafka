@@ -23,9 +23,9 @@ virtual_env:
 start_containers: clean_containers
 	@docker-compose up -d
 	@echo "Waiting for containers..."
-	@docker run --rm --network 'pipelinewise_tap_kafka_network' busybox /bin/sh -c "until nc -z zookeeper ${ZOOKEEPER_CLIENT_PORT}; do sleep 1; echo 'Waiting for Zookeeper to come up...'; done"
-	@docker run --rm --network 'pipelinewise_tap_kafka_network' busybox /bin/sh -c "until nc -z kafka ${KAFKA_PORT}; do sleep 1; echo 'Waiting for Kafka to come up...'; done"
-	@docker run --rm --network 'pipelinewise_tap_kafka_network' busybox /bin/sh -c "until nc -z schema_registry ${SCHEMA_REGISTRY_PORT}; do sleep 1; echo 'Waiting for Schema Registry to come up...'; done"
+	@docker run --rm --network 'tap_kafka_network' busybox /bin/sh -c "until nc -z zookeeper ${ZOOKEEPER_CLIENT_PORT}; do sleep 1; echo 'Waiting for Zookeeper to come up...'; done"
+	@docker run --rm --network 'tap_kafka_network' busybox /bin/sh -c "until nc -z kafka ${KAFKA_PORT}; do sleep 1; echo 'Waiting for Kafka to come up...'; done"
+	@docker run --rm --network 'tap_kafka_network' busybox /bin/sh -c "until nc -z schema_registry ${SCHEMA_REGISTRY_PORT}; do sleep 1; echo 'Waiting for Schema Registry to come up...'; done"
 
 clean_containers:
 	@echo "Killing and removing containers..."

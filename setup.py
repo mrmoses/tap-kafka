@@ -5,28 +5,30 @@ from setuptools import setup
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-setup(name='pipelinewise-tap-kafka',
-      version='8.2.1',
-      description='Singer.io tap for extracting data from Kafka topic - PipelineWise compatible',
+setup(name='tap-kafka',
+      version='9.0.0',
+      description='Singer.io tap for extracting data from a Kafka topic',
       long_description=long_description,
       long_description_content_type='text/markdown',
       author='TransferWise',
-      url='https://github.com/transferwise/pipelinewise-tap-kafka',
+      maintainer='mrmoses',
+      url='https://github.com/mrmoses/tap-kafka',
       classifiers=[
           'License :: OSI Approved :: GNU Affero General Public License v3',
           'Programming Language :: Python :: 3 :: Only'
       ],
       install_requires=[
-          'pipelinewise-singer-python==2.*',
-          'dpath==2.1.*',
-          'confluent-kafka[protobuf]==2.3.*',
-          'grpcio-tools==1.57.*'
+          'singer-python==6.*',
+          'orjson==3.11.*',
+          'dpath==2.2.*',
+          'confluent-kafka[protobuf]==2.13.*',
+          'grpcio-tools==1.76.*'
       ],
       extras_require={
           'test': [
-              'pytest==7.4.*',
-              'pylint==2.17.*',
-              'pytest-cov==4.0.*'
+              'pytest==9.0.*',
+              'pylint==4.0.*',
+              'pytest-cov==7.0.*'
           ]
       },
       entry_points='''

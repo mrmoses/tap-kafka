@@ -132,6 +132,8 @@ class TestSync(unittest.TestCase):
             'topic': 'my_topic',
             'group_id': 'my_group_id',
             'bootstrap_servers': 'server1,server2,server3',
+            'client_id': None,
+            'bookmark_precedence': tap_kafka.DEFAULT_BOOKMARK_PRECEDENCE, 
             'primary_keys': {},
             'use_message_key': True,
             'initial_start_time': tap_kafka.DEFAULT_INITIAL_START_TIME,
@@ -142,11 +144,16 @@ class TestSync(unittest.TestCase):
             'heartbeat_interval_ms': tap_kafka.DEFAULT_HEARTBEAT_INTERVAL_MS,
             'max_poll_records': tap_kafka.DEFAULT_MAX_POLL_RECORDS,
             'max_poll_interval_ms': tap_kafka.DEFAULT_MAX_POLL_INTERVAL_MS,
+            'poll_empty_retry_wait_ms': tap_kafka.DEFAULT_POLL_EMPTY_RETRY_WAIT_MS,
             'message_format': tap_kafka.DEFAULT_MESSAGE_FORMAT,
             'partitions': tap_kafka.DEFAULT_PARTITIONS,
             'proto_classes_dir': tap_kafka.DEFAULT_PROTO_CLASSES_DIR,
             'proto_schema': tap_kafka.DEFAULT_PROTO_SCHEMA,
-            'debug_contexts': None
+            'debug_contexts': None,
+            'security_protocol': tap_kafka.DEFAULT_SECURITY_PROTOCOL,
+            'sasl_mechanisms': tap_kafka.DEFAULT_SASL_MECHANISMS,
+            'sasl_username': None,
+            'sasl_password': None
         })
 
     def test_generate_config_with_custom_parameters(self):
@@ -156,9 +163,11 @@ class TestSync(unittest.TestCase):
             'partitions': [2, 3],
             'group_id': 'my_group_id',
             'bootstrap_servers': 'server1,server2,server3',
+            'client_id': 'my_client_id',
             'primary_keys': {
                 'id': '$.jsonpath.to.primary_key'
             },
+            'bookmark_precedence': ['timestamp'],
             'max_runtime_ms': 1111,
             'commit_interval_ms': 10000,
             'batch_size_rows': 2222,
@@ -168,19 +177,26 @@ class TestSync(unittest.TestCase):
             'heartbeat_interval_ms': 3333,
             'max_poll_records': 4444,
             'max_poll_interval_ms': 5555,
+            'poll_empty_retry_wait_ms': 99,
             'message_format': 'protobuf',
             'proto_classes_dir': '/tmp/proto-classes',
             'proto_schema': 'proto-schema',
-            'debug_contexts': 'topic,cgrp'
+            'debug_contexts': 'topic,cgrp',
+            'security_protocol': 'sasl',
+            'sasl_mechanisms': 'sasl',
+            'sasl_username': 'susr',
+            'sasl_password': 'spwd'
         }
         self.assertDictEqual(tap_kafka.generate_config(custom_config), {
             'topic': 'my_topic',
             'partitions': [2, 3],
             'group_id': 'my_group_id',
             'bootstrap_servers': 'server1,server2,server3',
+            'client_id': 'my_client_id',
             'primary_keys': {
                 'id': '$.jsonpath.to.primary_key'
             },
+            'bookmark_precedence': ['timestamp'],
             'use_message_key': True,
             'initial_start_time': 'latest',
             'max_runtime_ms': 1111,
@@ -190,10 +206,15 @@ class TestSync(unittest.TestCase):
             'heartbeat_interval_ms': 3333,
             'max_poll_records': 4444,
             'max_poll_interval_ms': 5555,
+            'poll_empty_retry_wait_ms': 99,
             'message_format': 'protobuf',
             'proto_classes_dir': '/tmp/proto-classes',
             'proto_schema': 'proto-schema',
-            'debug_contexts': 'topic,cgrp'
+            'debug_contexts': 'topic,cgrp',
+            'security_protocol': 'sasl',
+            'sasl_mechanisms': 'sasl',
+            'sasl_username': 'susr',
+            'sasl_password': 'spwd'
         })
 
     def test_validate_config(self):
@@ -214,68 +235,84 @@ class TestSync(unittest.TestCase):
         # Partitions are in a list
         self.assertIsNone(tap_kafka.validate_config({'topic': 'my_topic',
                                                      'partitions': [1, 2, 2, 2],
+                                                     'bookmark_precedence': [],
                                                      'group_id': 'my_group_id',
                                                      'bootstrap_servers': 'server1,server2,server3',
                                                      'message_format': 'json',
-                                                     'initial_start_time': 'latest'}))
+                                                     'initial_start_time': 'latest',
+                                                     'bookmark_precedence': tap_kafka.DEFAULT_BOOKMARK_PRECEDENCE}))
 
         # Initial start time is a reserved word (beginning)
         self.assertIsNone(tap_kafka.validate_config({'topic': 'my_topic',
                                                      'partitions': [],
+                                                     'bookmark_precedence': [],
                                                      'group_id': 'my_group_id',
                                                      'bootstrap_servers': 'server1,server2,server3',
                                                      'message_format': 'json',
-                                                     'initial_start_time': 'beginning'}))
+                                                     'initial_start_time': 'beginning',
+                                                     'bookmark_precedence': tap_kafka.DEFAULT_BOOKMARK_PRECEDENCE}))
 
         # Initial start time is a reserved word (latest)
         self.assertIsNone(tap_kafka.validate_config({'topic': 'my_topic',
                                                      'partitions': [],
+                                                     'bookmark_precedence': [],
                                                      'group_id': 'my_group_id',
                                                      'bootstrap_servers': 'server1,server2,server3',
                                                      'message_format': 'json',
-                                                     'initial_start_time': 'latest'}))
+                                                     'initial_start_time': 'latest',
+                                                     'bookmark_precedence': tap_kafka.DEFAULT_BOOKMARK_PRECEDENCE}))
 
         # Initial start time is a reserved word (earliset)
         self.assertIsNone(tap_kafka.validate_config({'topic': 'my_topic',
                                                      'partitions': [],
+                                                     'bookmark_precedence': [],
                                                      'group_id': 'my_group_id',
                                                      'bootstrap_servers': 'server1,server2,server3',
                                                      'message_format': 'json',
-                                                     'initial_start_time': 'earliest'}))
+                                                     'initial_start_time': 'earliest',
+                                                     'bookmark_precedence': tap_kafka.DEFAULT_BOOKMARK_PRECEDENCE}))
 
         # Initial start time is an ISO timestamp
         self.assertIsNone(tap_kafka.validate_config({'topic': 'my_topic',
                                                      'partitions': [],
+                                                     'bookmark_precedence': [],
                                                      'group_id': 'my_group_id',
                                                      'bootstrap_servers': 'server1,server2,server3',
                                                      'message_format': 'json',
-                                                     'initial_start_time': '2022-12-03T11:39:53'}))
+                                                     'initial_start_time': '2022-12-03T11:39:53',
+                                                     'bookmark_precedence': tap_kafka.DEFAULT_BOOKMARK_PRECEDENCE}))
 
         # Should raise an Exception if initial_start_time is not ISO timestamp
         with self.assertRaises(InvalidConfigException):
             tap_kafka.validate_config({'topic': 'my_topic',
                                                      'partitions': [],
+                                                     'bookmark_precedence': [],
                                                      'group_id': 'my_group_id',
                                                      'bootstrap_servers': 'server1,server2,server3',
                                                      'message_format': 'json',
-                                                     'initial_start_time': 'not-ISO-sorry'})
+                                                     'initial_start_time': 'not-ISO-sorry',
+                                                     'bookmark_precedence': tap_kafka.DEFAULT_BOOKMARK_PRECEDENCE})
 
         # Should raise an exception if message format is protobuf but proto schema is not provided
         with self.assertRaises(InvalidConfigException):
             tap_kafka.validate_config({'topic': 'my_topic',
                                        'partitions': [],
+                                       'bookmark_precedence': [],
                                        'group_id': 'my_group_id',
                                        'bootstrap_servers': 'server1,server2,server3',
                                        'message_format': 'protobuf',
-                                       'initial_start_time': 'earliest'})
+                                       'initial_start_time': 'earliest',
+                                        'bookmark_precedence': tap_kafka.DEFAULT_BOOKMARK_PRECEDENCE})
 
         self.assertIsNone(tap_kafka.validate_config({'topic': 'my_topic',
                                                      'partitions': [],
+                                                     'bookmark_precedence': [],
                                                      'group_id': 'my_group_id',
                                                      'bootstrap_servers': 'server1,server2,server3',
                                                      'message_format': 'protobuf',
                                                      'proto_schema': 'proto-schema',
-                                                     'initial_start_time': 'latest'}))
+                                                     'initial_start_time': 'latest',
+                                                     'bookmark_precedence': tap_kafka.DEFAULT_BOOKMARK_PRECEDENCE}))
 
     def test_generate_schema_with_no_pk(self):
         """Should not add extra column when no PK defined"""
@@ -590,7 +627,7 @@ class TestSync(unittest.TestCase):
                                            offset=111,
                                            partition=1)
 
-        self.assertDictEqual(sync.update_bookmark(input_state, topic, message, comment=True), {'bookmarks': {'test-topic-updated': {
+        self.assertDictEqual(sync.update_bookmark(input_state, topic, message, comment='order of precedence : offset, timestamp, start_time; only one will be used'), {'bookmarks': {'test-topic-updated': {
                                 'partition_0': {
                                     'partition': 0,
                                     'offset': 1234,
@@ -867,11 +904,11 @@ class TestSync(unittest.TestCase):
         consumer = KafkaConsumerMock(fake_messages=[])
         partition_bookmark = {'partition': 0, 'offset': 1234, 'timestamp': 1638132327000}
 
-        # By default TopicPartition offset needs to be bookmarked offset
+        # By default TopicPartition offset needs to be bookmarked offset +1 to avoid re-processing the last message
         topic_partition = sync.bookmarked_partition_offset(consumer, topic, partition_bookmark)
         self.assertEqual(topic_partition.topic, topic)
         self.assertEqual(topic_partition.partition, 0)
-        self.assertEqual(topic_partition.offset, 1234)
+        self.assertEqual(topic_partition.offset, 1235)
 
         partition_bookmark = {'partition': 0, 'timestamp': 1638132327000}
 
