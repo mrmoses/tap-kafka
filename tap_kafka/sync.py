@@ -1,6 +1,7 @@
 """Sync functions that consumes and transforms kafka messages to singer messages"""
 import time
 import copy
+import json
 import dpath.util
 import dateutil
 import datetime
@@ -257,6 +258,15 @@ def select_kafka_partitions(consumer, kafka_config) -> List[confluent_kafka.Topi
     return partitions
 
 
+BOOKMARK_METHODS = {'offset', 'timestamp', 'start_time'}
+
+
+def resolved_bookmark_key(bookmark: dict, precedence: list):
+    """The precedence key that actually resolves this bookmark (None if none usable).
+    `and k in BOOKMARK_METHODS` reproduces the existing skip-unknown-key behavior."""
+    return next((k for k in precedence if k in bookmark and k in BOOKMARK_METHODS), None)
+
+
 def bookmarked_partition_offset(consumer, topic: str, partition_bookmark: dict, bookmark_precedence: list = DEFAULT_BOOKMARK_PRECEDENCE) -> confluent_kafka.TopicPartition:
     """Transform a bookmarked partition to a kafka TopicPartition object"""
 
@@ -267,16 +277,11 @@ def bookmarked_partition_offset(consumer, topic: str, partition_bookmark: dict, 
     }
 
     try:
-        for bookmark_prop in bookmark_precedence:
-            if bookmark_prop in partition_bookmark:                
-                partition_method = init_partition_methods.get(bookmark_prop)
+        key = resolved_bookmark_key(partition_bookmark, bookmark_precedence)
+        if key is None:
+            raise InvalidBookmarkException(f"Invalid bookmark. Bookmark does not include 'partition' and ('offset' or 'timestamp') keys.")
+        return init_partition_methods[key](consumer, topic, partition_bookmark)
 
-                if partition_method:
-                    return partition_method(consumer, topic, partition_bookmark)
-        
-        # If the loop completes, no valid keys were found in the bookmark.
-        raise InvalidBookmarkException(f"Invalid bookmark. Bookmark does not include 'partition' and ('offset' or 'timestamp') keys.")
-             
     except TypeError:
         raise InvalidBookmarkException(f"Invalid bookmark. One or more bookmark entries using invalid type(s).")
     except KeyError:
@@ -286,7 +291,7 @@ def bookmarked_partition_offset(consumer, topic: str, partition_bookmark: dict, 
 def partition_by_offset(consumer, topic: str, partition_bookmark: dict) -> confluent_kafka.TopicPartition:
     """Create a Kafka TopicPartition object from a bookmark's offset"""
     next_offset = partition_bookmark['offset'] + 1 # add 1 to start from the next unconsumed message
-    LOGGER.info(f"Partition [{partition_bookmark['partition']}] found in bookmark - setting offset to '{next_offset}' (bookmark was {partition_bookmark['offset']})")
+    LOGGER.debug(f"Partition [{partition_bookmark['partition']}] found in bookmark - setting offset to '{next_offset}' (bookmark was {partition_bookmark['offset']})")
     partition = confluent_kafka.TopicPartition(topic, partition_bookmark['partition'], next_offset)
     return partition
 
@@ -295,7 +300,7 @@ def partition_by_timestamp(consumer, topic: str, partition_bookmark: dict) -> co
     """Create a Kafka TopicPartition object from a bookmark's timestamp"""
     epoch = partition_bookmark['timestamp']
     iso_timestamp = epoch_to_iso_timestamp(epoch)
-    LOGGER.info(f"Partition [{partition_bookmark['partition']}] found in bookmark - setting offset to timestamp '{epoch}' ({iso_timestamp})")
+    LOGGER.debug(f"Partition [{partition_bookmark['partition']}] found in bookmark - setting offset to timestamp '{epoch}' ({iso_timestamp})")
     partition = confluent_kafka.TopicPartition(topic, partition_bookmark['partition'], epoch)
     partition = consumer.offsets_for_times([partition])[0]
     return partition
@@ -305,7 +310,7 @@ def partition_by_starttime(consumer, topic: str, partition_bookmark: dict) -> co
     """Create a Kafka TopicPartition object from a bookmark's start_time"""
     start_time = partition_bookmark['start_time']
     epoch = iso_timestamp_to_epoch(start_time)
-    LOGGER.info(f"Partition [{partition_bookmark['partition']}] found in bookmark - setting offset to start_time '{start_time}' ({epoch})")
+    LOGGER.debug(f"Partition [{partition_bookmark['partition']}] found in bookmark - setting offset to start_time '{start_time}' ({epoch})")
     partition = confluent_kafka.TopicPartition(topic, partition_bookmark['partition'], epoch)
     partition = consumer.offsets_for_times([partition])[0]
     return partition
@@ -318,9 +323,21 @@ def get_bookmark_comment(kafka_config) -> str:
     return f'order of precedence : {bookmark_precedence_str}; only one will be used'
 
 
+def build_partition_summary_entry(low, high, selected_offset, matched_bookmark, precedence, found_in_bookmark):
+    """Build one per-partition entry for the per-run offset summary (pure, unit-testable)."""
+    key = resolved_bookmark_key(matched_bookmark, precedence) if matched_bookmark else None
+    return {
+        'watermarks': [low, high],
+        'bookmark_value': matched_bookmark[key] if (matched_bookmark and key) else None,
+        'resolved_by': key if found_in_bookmark else 'initial_start_time',
+        'caught_up': selected_offset >= high,
+        'selected_offset': selected_offset,
+    }
+
+
 def set_partition_offsets(consumer, partitions, kafka_config, state = {}):
     """Setting offsets to bookmarked state"""
-    LOGGER.info(f"Setting offsets to bookmarked state")
+    LOGGER.info("Setting offsets to bookmarked state")
 
     topic = kafka_config['topic']
     initial_start_time = kafka_config['initial_start_time']
@@ -332,26 +349,28 @@ def set_partition_offsets(consumer, partitions, kafka_config, state = {}):
         bookmarked_partitions = {}
 
     partitions_to_set = []
+    partition_summary = {}
 
     for partition in partitions:
         found_in_bookmark = False
+        matched_bookmark = None
 
         low_offset, high_offset = consumer.get_watermark_offsets(partition)
-        LOGGER.info(f"Partition [{partition.partition}] watermarks : [{low_offset},{high_offset}]")
 
         for bookmark in bookmarked_partitions:
             if partition.partition == bookmarked_partitions[bookmark]['partition']:
-                partition = bookmarked_partition_offset(consumer, topic, bookmarked_partitions[bookmark], bookmark_precedence)
+                matched_bookmark = bookmarked_partitions[bookmark]
+                partition = bookmarked_partition_offset(consumer, topic, matched_bookmark, bookmark_precedence)
                 # Bookmark is valid if within range, or caught up (at or beyond high_offset)
                 if partition.offset >= low_offset:
                     found_in_bookmark = True
                     # If caught up (at or beyond high_offset), just keep the bookmark offset
                     # The consumer will wait for new messages at this offset
                     if partition.offset >= high_offset:
-                        LOGGER.info(f"Partition [{partition.partition}] bookmark offset {partition.offset} is at/beyond high_offset {high_offset}. Caught up, will wait for new messages.")
+                        LOGGER.debug(f"Partition [{partition.partition}] bookmark offset {partition.offset} is at/beyond high_offset {high_offset}. Caught up, will wait for new messages.")
 
         if not found_in_bookmark:
-            LOGGER.info(f"Partition [{partition.partition}] not found/valid in bookmark - setting offset to '{initial_start_time}'")
+            LOGGER.debug(f"Partition [{partition.partition}] not found/valid in bookmark - setting offset to '{initial_start_time}'")
             if initial_start_time == 'beginning':
                 partition.offset = low_offset
             elif initial_start_time == 'earliest':
@@ -361,7 +380,7 @@ def set_partition_offsets(consumer, partitions, kafka_config, state = {}):
                 partition.offset = high_offset - 1
             elif initial_start_time is not None:
                 epoch = iso_timestamp_to_epoch(initial_start_time)
-                LOGGER.info(f"'{initial_start_time}' = ({epoch})")
+                LOGGER.debug(f"'{initial_start_time}' = ({epoch})")
                 partition.offset = epoch
 
                 # if there are no messages at or after the initial_start_time timestamp, this returns -1
@@ -374,6 +393,11 @@ def set_partition_offsets(consumer, partitions, kafka_config, state = {}):
                     partition.offset = max(partition.offset, low_offset)
 
         partitions_to_set.append(partition)
+        partition_summary[partition.partition] = build_partition_summary_entry(
+            low_offset, high_offset, partition.offset, matched_bookmark, bookmark_precedence, found_in_bookmark)
+
+    if partition_summary:
+        LOGGER.info("Partition offsets set: %s", json.dumps(partition_summary))
 
     return partitions_to_set
 
@@ -397,7 +421,7 @@ def assign_kafka_partitions(consumer, partitions):
 
 def commit_consumer_to_bookmarked_state(consumer, topic, state):
     """Commit every bookmarked offset to kafka"""
-    LOGGER.info("Committing bookmarked offsets to kafka ...")
+    LOGGER.debug("Committing bookmarked offsets to kafka ...")
 
     offsets_to_commit = []
     bookmarked_partitions = state.get('bookmarks', {}).get(topic, {})
@@ -410,7 +434,7 @@ def commit_consumer_to_bookmarked_state(consumer, topic, state):
 
     consumer.commit(offsets=offsets_to_commit, asynchronous=False)
 
-    LOGGER.info("Bookmarked offsets committed")
+    LOGGER.debug("Bookmarked offsets committed")
 
 
 # pylint: disable=too-many-locals,too-many-statements

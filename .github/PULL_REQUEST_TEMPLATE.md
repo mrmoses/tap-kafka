@@ -25,8 +25,6 @@ _Put an `x` in the boxes that apply_
 - [ ] I have added tests that prove my fix is effective or that my feature works
 - [ ] Unit tests for changes (not needed for documentation changes)
 - [ ] CI checks pass with my changes
-- [ ] Bumping version in `setup.py` is an individual PR and not mixed with feature or bugfix PRs
-- [ ] Commit message/PR title starts with `[AP-NNNN]` (if applicable. AP-NNNN = JIRA ID)
-- [ ] Branch name starts with `AP-NNN` (if applicable. AP-NNN = JIRA ID)
+- [ ] `CHANGELOG.md` and the version in `setup.py` are updated if this change is user-facing
 - [ ] Commits follow "[How to write a good git commit message](http://chris.beams.io/posts/git-commit/)"
 - [ ] Relevant documentation is updated including usage instructions
