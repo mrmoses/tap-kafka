@@ -1,3 +1,10 @@
+9.1.0 (2026-06-09)
+------------------
+
+**Logging changes**
+- Reduced high-frequency INFO log volume: demoted the per-partition `partition_by_*` "found in bookmark" lines, the per-partition watermark / caught-up / not-found lines, and the periodic "Committing bookmarked offsets" / "Bookmarked offsets committed" pair to DEBUG.
+- Added a single structured JSON per-run summary log (`Partition offsets set: {...}`) at INFO, replacing the per-partition INFO lines. Each partition entry carries `watermarks`, `bookmark_value`, `resolved_by`, `caught_up`, and `selected_offset` so log platforms can facet and alert on the fields.
+
 9.0.0 (2026-06-08)
 ------------------
 
