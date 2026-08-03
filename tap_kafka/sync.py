@@ -130,6 +130,7 @@ def init_kafka_consumer(kafka_config):
         'session.timeout.ms': kafka_config['session_timeout_ms'],
         'heartbeat.interval.ms': kafka_config['heartbeat_interval_ms'],
         'max.poll.interval.ms': kafka_config['max_poll_interval_ms'],
+        'auto.offset.reset': kafka_config['auto_offset_reset'],
 
         # Non-configurable parameters
         'enable.auto.commit': False,
@@ -361,13 +362,18 @@ def set_partition_offsets(consumer, partitions, kafka_config, state = {}):
             if partition.partition == bookmarked_partitions[bookmark]['partition']:
                 matched_bookmark = bookmarked_partitions[bookmark]
                 partition = bookmarked_partition_offset(consumer, topic, matched_bookmark, bookmark_precedence)
-                # Bookmark is valid if within range, or caught up (at or beyond high_offset)
+                # Bookmark is valid if at or above the low watermark
                 if partition.offset >= low_offset:
                     found_in_bookmark = True
-                    # If caught up (at or beyond high_offset), just keep the bookmark offset
-                    # The consumer will wait for new messages at this offset
-                    if partition.offset >= high_offset:
-                        LOGGER.debug(f"Partition [{partition.partition}] bookmark offset {partition.offset} is at/beyond high_offset {high_offset}. Caught up, will wait for new messages.")
+                    # Keep the bookmark offset as-is.
+                    if partition.offset == high_offset:
+                        LOGGER.debug(f"Partition [{partition.partition}] bookmark offset {partition.offset} "
+                                     f"equals high_offset {high_offset}. Caught up, will wait for new messages.")
+                    elif partition.offset > high_offset:
+                        LOGGER.warning(f"Partition [{partition.partition}] bookmark offset {partition.offset} "
+                                       f"exceeds high_offset {high_offset} - stale/out-of-range bookmark "
+                                       f"(topic likely recreated or shrank). Seek will be corrected by "
+                                       f"auto.offset.reset='{kafka_config['auto_offset_reset']}'.")
 
         if not found_in_bookmark:
             LOGGER.debug(f"Partition [{partition.partition}] not found/valid in bookmark - setting offset to '{initial_start_time}'")

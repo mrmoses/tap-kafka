@@ -21,6 +21,7 @@ def _consumer_config_for_sync(**overrides):
         'session_timeout_ms': 30000,
         'heartbeat_interval_ms': 10000,
         'max_poll_interval_ms': 300000,
+        'auto_offset_reset': 'latest',
         'message_format': 'json',
         'debug_contexts': None,
         'client_id': None,
