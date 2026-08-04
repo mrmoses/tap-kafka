@@ -64,6 +64,15 @@ class TestBuildPartitionSummaryEntry(unittest.TestCase):
 
         self.assertTrue(entry['caught_up'])
 
+    def test_not_caught_up_when_selected_offset_above_high(self):
+        # A stale offset above the high watermark is not 'caught up'.
+        entry = sync.build_partition_summary_entry(
+            low=1000, high=2000, selected_offset=2001,
+            matched_bookmark={'partition': 0, 'offset': 2000},
+            precedence=DEFAULT_BOOKMARK_PRECEDENCE, found_in_bookmark=True)
+
+        self.assertFalse(entry['caught_up'])
+
 
 if __name__ == '__main__':
     unittest.main()

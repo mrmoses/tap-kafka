@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(name='tap-kafka',
-      version='9.1.0',
+      version='9.2.0',
       description='Singer.io tap for extracting data from a Kafka topic',
       long_description=long_description,
       long_description_content_type='text/markdown',

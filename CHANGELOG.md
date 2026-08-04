@@ -1,3 +1,10 @@
+9.2.0 (2026-08-04)
+------------------
+
+**New config options**
+- `auto_offset_reset`: optional `auto.offset.reset` policy for the sync consumer, applied when a seek lands out of range (e.g. a deleted-and-recreated or shrunk topic whose offsets reset to 0). `earliest` restarts from offset 0 and drains the recreated topic deterministically; `latest` resumes at the partition's high watermark. Accepts `earliest` or `latest` only. Default `latest` preserves current behavior.
+- `set_partition_offsets` now logs a distinct warning when a bookmark offset exceeds the partition's high watermark (a stale / out-of-range bookmark), naming the `auto.offset.reset` policy that will correct it; the caught-up (offset equal to high watermark) case stays at DEBUG.
+
 9.1.0 (2026-06-09)
 ------------------
 

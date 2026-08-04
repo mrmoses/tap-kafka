@@ -34,11 +34,12 @@ def _consumer_mock(low=0, high=1000, committed_offset=None, offsets_for_times_of
     return consumer
 
 
-def _config(initial_start_time):
+def _config(initial_start_time, auto_offset_reset='latest'):
     return {
         'topic': TOPIC,
         'initial_start_time': initial_start_time,
         'bookmark_precedence': DEFAULT_BOOKMARK_PRECEDENCE,
+        'auto_offset_reset': auto_offset_reset,
     }
 
 

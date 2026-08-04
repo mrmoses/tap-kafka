@@ -45,5 +45,11 @@ partition's watermarks.
 
 ### Caught up
 
-A partition whose selected offset is at or beyond its high watermark — i.e. there
-are no unread messages and the consumer will wait for new ones.
+A partition whose selected offset equals its high watermark — i.e. there are no
+unread messages and the consumer will wait for new ones.
+
+### Stale bookmark
+
+A bookmark whose offset is *above* the partition's high watermark, indicating the
+topic was recreated or shrank. Distinct from a bookmark below the low watermark,
+which is expired rather than stale.

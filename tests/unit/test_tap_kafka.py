@@ -150,6 +150,7 @@ class TestSync(unittest.TestCase):
             'proto_classes_dir': tap_kafka.DEFAULT_PROTO_CLASSES_DIR,
             'proto_schema': tap_kafka.DEFAULT_PROTO_SCHEMA,
             'debug_contexts': None,
+            'auto_offset_reset': tap_kafka.DEFAULT_AUTO_OFFSET_RESET,
             'security_protocol': tap_kafka.DEFAULT_SECURITY_PROTOCOL,
             'sasl_mechanisms': tap_kafka.DEFAULT_SASL_MECHANISMS,
             'sasl_username': None,
@@ -182,6 +183,7 @@ class TestSync(unittest.TestCase):
             'proto_classes_dir': '/tmp/proto-classes',
             'proto_schema': 'proto-schema',
             'debug_contexts': 'topic,cgrp',
+            'auto_offset_reset': 'earliest',
             'security_protocol': 'sasl',
             'sasl_mechanisms': 'sasl',
             'sasl_username': 'susr',
@@ -211,6 +213,7 @@ class TestSync(unittest.TestCase):
             'proto_classes_dir': '/tmp/proto-classes',
             'proto_schema': 'proto-schema',
             'debug_contexts': 'topic,cgrp',
+            'auto_offset_reset': 'earliest',
             'security_protocol': 'sasl',
             'sasl_mechanisms': 'sasl',
             'sasl_username': 'susr',
@@ -239,6 +242,7 @@ class TestSync(unittest.TestCase):
                                                      'group_id': 'my_group_id',
                                                      'bootstrap_servers': 'server1,server2,server3',
                                                      'message_format': 'json',
+                                                     'auto_offset_reset': 'latest',
                                                      'initial_start_time': 'latest',
                                                      'bookmark_precedence': tap_kafka.DEFAULT_BOOKMARK_PRECEDENCE}))
 
@@ -249,6 +253,7 @@ class TestSync(unittest.TestCase):
                                                      'group_id': 'my_group_id',
                                                      'bootstrap_servers': 'server1,server2,server3',
                                                      'message_format': 'json',
+                                                     'auto_offset_reset': 'latest',
                                                      'initial_start_time': 'beginning',
                                                      'bookmark_precedence': tap_kafka.DEFAULT_BOOKMARK_PRECEDENCE}))
 
@@ -259,6 +264,7 @@ class TestSync(unittest.TestCase):
                                                      'group_id': 'my_group_id',
                                                      'bootstrap_servers': 'server1,server2,server3',
                                                      'message_format': 'json',
+                                                     'auto_offset_reset': 'latest',
                                                      'initial_start_time': 'latest',
                                                      'bookmark_precedence': tap_kafka.DEFAULT_BOOKMARK_PRECEDENCE}))
 
@@ -269,6 +275,7 @@ class TestSync(unittest.TestCase):
                                                      'group_id': 'my_group_id',
                                                      'bootstrap_servers': 'server1,server2,server3',
                                                      'message_format': 'json',
+                                                     'auto_offset_reset': 'latest',
                                                      'initial_start_time': 'earliest',
                                                      'bookmark_precedence': tap_kafka.DEFAULT_BOOKMARK_PRECEDENCE}))
 
@@ -279,6 +286,7 @@ class TestSync(unittest.TestCase):
                                                      'group_id': 'my_group_id',
                                                      'bootstrap_servers': 'server1,server2,server3',
                                                      'message_format': 'json',
+                                                     'auto_offset_reset': 'latest',
                                                      'initial_start_time': '2022-12-03T11:39:53',
                                                      'bookmark_precedence': tap_kafka.DEFAULT_BOOKMARK_PRECEDENCE}))
 
@@ -311,8 +319,33 @@ class TestSync(unittest.TestCase):
                                                      'bootstrap_servers': 'server1,server2,server3',
                                                      'message_format': 'protobuf',
                                                      'proto_schema': 'proto-schema',
+                                                     'auto_offset_reset': 'latest',
                                                      'initial_start_time': 'latest',
                                                      'bookmark_precedence': tap_kafka.DEFAULT_BOOKMARK_PRECEDENCE}))
+
+        # auto_offset_reset accepts 'earliest' and 'latest'
+        for auto_offset_reset in ['earliest', 'latest']:
+            self.assertIsNone(tap_kafka.validate_config({'topic': 'my_topic',
+                                                         'partitions': [],
+                                                         'group_id': 'my_group_id',
+                                                         'bootstrap_servers': 'server1,server2,server3',
+                                                         'message_format': 'json',
+                                                         'initial_start_time': 'latest',
+                                                         'auto_offset_reset': auto_offset_reset,
+                                                         'bookmark_precedence': tap_kafka.DEFAULT_BOOKMARK_PRECEDENCE}))
+
+        # auto_offset_reset rejects anything else, including an explicit null, 'error'
+        # (intentionally not allowed) and nonsense
+        for auto_offset_reset in ['error', 'sometimes', None]:
+            with self.assertRaises(InvalidConfigException):
+                tap_kafka.validate_config({'topic': 'my_topic',
+                                           'partitions': [],
+                                           'group_id': 'my_group_id',
+                                           'bootstrap_servers': 'server1,server2,server3',
+                                           'message_format': 'json',
+                                           'initial_start_time': 'latest',
+                                           'auto_offset_reset': auto_offset_reset,
+                                           'bookmark_precedence': tap_kafka.DEFAULT_BOOKMARK_PRECEDENCE})
 
     def test_generate_schema_with_no_pk(self):
         """Should not add extra column when no PK defined"""

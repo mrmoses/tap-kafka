@@ -37,6 +37,7 @@ from .defaults import (
     DEFAULT_PROTO_CLASSES_DIR,
     DEFAULT_SECURITY_PROTOCOL,
     DEFAULT_SASL_MECHANISMS,
+    DEFAULT_AUTO_OFFSET_RESET,
 )
 
 def dump_catalog(all_streams):
@@ -115,6 +116,9 @@ def validate_config(config) -> None:
     if config.get('message_format') == 'protobuf' and not config.get('proto_schema'):
         raise InvalidConfigException("Invalid config. Cannot find required proto_schema for protobuf message type")
 
+    if config.get('auto_offset_reset') not in ['earliest', 'latest']:
+        raise InvalidConfigException("Invalid config. 'auto_offset_reset' needs to be one of 'earliest' or 'latest'")
+
 
 def validate_bookmark_precedence(bookmark_precedence):   
     """Validate 'bookmark_precedence' configuration value""" 
@@ -160,6 +164,8 @@ def generate_config(args_config):
         'proto_schema': args_config.get('proto_schema', DEFAULT_PROTO_SCHEMA),
         'proto_classes_dir': args_config.get('proto_classes_dir', DEFAULT_PROTO_CLASSES_DIR),
         'debug_contexts': args_config.get('debug_contexts'),
+
+        'auto_offset_reset': args_config.get('auto_offset_reset', DEFAULT_AUTO_OFFSET_RESET),
 
         'security_protocol': args_config.get('security_protocol', DEFAULT_SECURITY_PROTOCOL),
         'sasl_mechanisms': args_config.get('sasl_mechanisms', DEFAULT_SASL_MECHANISMS),
