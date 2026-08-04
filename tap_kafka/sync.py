@@ -331,7 +331,7 @@ def build_partition_summary_entry(low, high, selected_offset, matched_bookmark, 
         'watermarks': [low, high],
         'bookmark_value': matched_bookmark[key] if (matched_bookmark and key) else None,
         'resolved_by': key if found_in_bookmark else 'initial_start_time',
-        'caught_up': selected_offset >= high,
+        'caught_up': selected_offset == high,
         'selected_offset': selected_offset,
     }
 

@@ -109,16 +109,17 @@ class TestSetPartitionOffsetsBookmarkValidity(unittest.TestCase):
 
         self.assertEqual(result[0].offset, 1000)
 
-    def test_bookmark_beyond_high_offset_clamps_to_low(self):
-        # Bookmark sits past the high watermark (partition truncated/recreated).
+    def test_bookmark_beyond_high_offset_left_for_auto_offset_reset(self):
+        # Bookmark past the high watermark (partition truncated/recreated) is left out of range;
+        # the consumer's auto.offset.reset corrects the seek, so set_partition_offsets keeps it as-is.
         consumer = _consumer_mock(low=0, high=500)
         partitions = [confluent_kafka.TopicPartition(TOPIC, 0)]
         state = _state_with_bookmark(0, offset=999, timestamp=1638132327000)
 
         result = sync.set_partition_offsets(consumer, partitions, _config(), state)
 
-        # offset 999 + 1 = 1000 exceeds high 500 → clamped to low_offset to re-read available messages.
-        self.assertEqual(result[0].offset, 0)
+        # offset 999 + 1 = 1000, kept out of range (> high 500) for auto.offset.reset to correct.
+        self.assertEqual(result[0].offset, 1000)
 
     def test_bookmark_at_low_offset_is_used(self):
         consumer = _consumer_mock(low=100, high=500)
