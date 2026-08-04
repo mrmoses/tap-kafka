@@ -334,8 +334,9 @@ class TestSync(unittest.TestCase):
                                                          'auto_offset_reset': auto_offset_reset,
                                                          'bookmark_precedence': tap_kafka.DEFAULT_BOOKMARK_PRECEDENCE}))
 
-        # auto_offset_reset rejects anything else, including 'error' (intentionally not allowed) and nonsense
-        for auto_offset_reset in ['error', 'sometimes']:
+        # auto_offset_reset rejects anything else, including an explicit null, 'error'
+        # (intentionally not allowed) and nonsense
+        for auto_offset_reset in ['error', 'sometimes', None]:
             with self.assertRaises(InvalidConfigException):
                 tap_kafka.validate_config({'topic': 'my_topic',
                                            'partitions': [],
