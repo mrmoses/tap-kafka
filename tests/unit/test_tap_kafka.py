@@ -624,7 +624,7 @@ class TestSync(unittest.TestCase):
             {'bookmarks': {'test-topic': {'partition_0': {
                 'partition': 0,
                 'offset': 1234,
-                'start_time': '2009-02-13T23:31:30.123',
+                'start_time': '2009-02-13T23:31:30.123+00:00',
                 'timestamp': 1234567890123
             }}}})
 
@@ -644,7 +644,7 @@ class TestSync(unittest.TestCase):
             {'bookmarks': {'test-topic-updated': {'partition_0': {
                 'partition': 0,
                 'offset': 999,
-                'start_time': '2009-02-13T23:31:30.123',
+                'start_time': '2009-02-13T23:31:30.123+00:00',
                 'timestamp': 1234567890123
             }}}})
 
@@ -669,7 +669,7 @@ class TestSync(unittest.TestCase):
                                     'partition': 1,
                                     'offset': 111,
                                     'timestamp': 1234567890123,
-                                    'start_time': '2009-02-13T23:31:30.123',
+                                    'start_time': '2009-02-13T23:31:30.123+00:00',
                                     '_comment': 'order of precedence : offset, timestamp, start_time; only one will be used'
                                 }}}})
 
@@ -695,7 +695,7 @@ class TestSync(unittest.TestCase):
                                     'partition': 1,
                                     'offset': 111,
                                     'timestamp': 1234567890123,
-                                    'start_time': '2009-02-13T23:31:30.123'
+                                    'start_time': '2009-02-13T23:31:30.123+00:00'
                                 }}}})
 
 
@@ -720,7 +720,7 @@ class TestSync(unittest.TestCase):
                                     'partition': 1,
                                     'offset': 111,
                                     'timestamp': 1234567890123,
-                                    'start_time': '2009-02-13T23:31:30.123'
+                                    'start_time': '2009-02-13T23:31:30.123+00:00'
                                 }}}})
 
 
@@ -748,7 +748,7 @@ class TestSync(unittest.TestCase):
                                     'partition': 1,
                                     'offset': 111,
                                     'timestamp': 1234567890123,
-                                    'start_time': '2009-02-13T23:31:30.123'
+                                    'start_time': '2009-02-13T23:31:30.123+00:00'
                                 }}}})
 
 
@@ -776,7 +776,7 @@ class TestSync(unittest.TestCase):
                            'test-topic-1': {'partition_0': {'partition': 0,
                                                             'offset': 111,
                                                             'timestamp': 1234567890123,
-                                                            'start_time': '2009-02-13T23:31:30.123'
+                                                            'start_time': '2009-02-13T23:31:30.123+00:00'
                                 }}}})
 
     def test_update_bookmark__not_integer(self):
@@ -796,7 +796,7 @@ class TestSync(unittest.TestCase):
             {'bookmarks': {'test-topic-updated': {'partition_0': {'partition': 0,
                                                                   'offset': 111,
                                                                   'timestamp': 1234567890123,
-                                                                  'start_time': '2009-02-13T23:31:30.123'
+                                                                  'start_time': '2009-02-13T23:31:30.123+00:00'
                                 }}}})
 
         # Timestamp that cannot be converted to int should raise exception
@@ -1008,7 +1008,7 @@ class TestSync(unittest.TestCase):
 
         # Using T as date and time delimiter
         self.assertEqual(sync.iso_timestamp_to_epoch('2021-11-01T23:01:11'), 1635807671000)
-        self.assertEqual(sync.iso_timestamp_to_epoch('2021-11-01T23:01:11.123'), 1635807671123)
+        self.assertEqual(sync.iso_timestamp_to_epoch('2021-11-01T23:01:11.123+00:00'), 1635807671123)
         self.assertEqual(sync.iso_timestamp_to_epoch('2021-11-01T23:01:11.123456'), 1635807671123)
         self.assertEqual(sync.iso_timestamp_to_epoch('2021-11-01T23:01:11.123987'), 1635807671123)
         self.assertEqual(sync.iso_timestamp_to_epoch('2021-11-01T23:01:11.123987+00:00'), 1635807671123)
@@ -1020,8 +1020,8 @@ class TestSync(unittest.TestCase):
 
     def test_epoch_to_iso_timestamp(self):
         """Validate converting epoch milliseconds to ISO timestamp"""
-        self.assertEqual(sync.epoch_to_iso_timestamp(1635807671000),'2021-11-01T23:01:11.000')
-        self.assertEqual(sync.epoch_to_iso_timestamp(1635807671123),'2021-11-01T23:01:11.123')
+        self.assertEqual(sync.epoch_to_iso_timestamp(1635807671000),'2021-11-01T23:01:11.000+00:00')
+        self.assertEqual(sync.epoch_to_iso_timestamp(1635807671123),'2021-11-01T23:01:11.123+00:00')
 
         # Invalid epoch should raise exception
         with self.assertRaises(InvalidTimestampException):
