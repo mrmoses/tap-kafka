@@ -3,7 +3,7 @@ import time
 import singer
 
 from confluent_kafka import KafkaException
-from datetime import datetime
+from datetime import datetime, timezone
 
 import tap_kafka.serialization
 import tests.integration.utils as test_utils
@@ -486,7 +486,7 @@ class TestKafkaConsumer(unittest.TestCase):
         time.sleep(2)
 
         # We will start consuming message starting from this moment
-        initial_start_time = datetime.now().isoformat()
+        initial_start_time = datetime.now(timezone.utc).isoformat()
 
         # Produce some more test messages
         test_utils.produce_messages(

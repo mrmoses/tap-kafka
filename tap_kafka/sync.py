@@ -98,9 +98,14 @@ def update_bookmark(state, topic, message, comment: str = None):
 def iso_timestamp_to_epoch(iso_timestamp: str) -> int:
     """Convert an ISO 8601 formatted string to epoch in milliseconds"""
     try:
-        return int(dateutil.parser.parse(iso_timestamp).timestamp() * 1000)
+        parsed = dateutil.parser.parse(iso_timestamp)
     except dateutil.parser.ParserError:
         raise InvalidTimestampException(f'{iso_timestamp} is not a valid ISO formatted string')
+
+    # treat naive timestamps as UTC, not host-local time
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+    return int(parsed.timestamp() * 1000)
 
 
 def epoch_to_iso_timestamp(epoch) -> str:
@@ -108,7 +113,7 @@ def epoch_to_iso_timestamp(epoch) -> str:
     if len(str(epoch)) != 13 or type(epoch) != int:
         raise InvalidTimestampException(f'{epoch} is not a valid millisecond epoch integer')
 
-    return datetime.datetime.utcfromtimestamp(epoch / 1000).isoformat(timespec='milliseconds')
+    return datetime.datetime.fromtimestamp(epoch / 1000, datetime.timezone.utc).isoformat(timespec='milliseconds')
 
 
 def error_cb(err):

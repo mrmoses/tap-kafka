@@ -1,3 +1,10 @@
+9.2.1 (2026-10-20)
+------------------
+
+**Behavior changes**
+- ISO timestamps without a time zone (`initial_start_time` and bookmark `start_time`) are now read as UTC instead of the host's local time. On hosts not set to UTC, a naive `initial_start_time` now resolves to a different offset than before.
+- Bookmark `start_time` values are now written with an explicit `+00:00` offset.
+
 9.2.0 (2026-08-04)
 ------------------
 
