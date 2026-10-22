@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(name='tap-kafka',
-      version='9.2.1',
+      version='9.2.2',
       description='Singer.io tap for extracting data from a Kafka topic',
       long_description=long_description,
       long_description_content_type='text/markdown',
@@ -19,16 +19,16 @@ setup(name='tap-kafka',
       ],
       install_requires=[
           'singer-python==6.*',
-          'orjson==3.11.*',
+          'orjson==3.13.*',
           'dpath==2.2.*',
-          'confluent-kafka[protobuf]==2.13.*',
+          'confluent-kafka[protobuf]==2.16.*',
           'grpcio-tools==1.76.*'
       ],
       extras_require={
           'test': [
-              'pytest==9.0.*',
-              'pylint==4.0.*',
-              'pytest-cov==7.0.*'
+              'pytest==9.1.*',
+              'pylint==4.1.*',
+              'pytest-cov==7.1.*'
           ]
       },
       entry_points='''
