@@ -1,3 +1,9 @@
+9.2.2 (2026-10-22)
+------------------
+
+**Dependency updates**
+- Bump `confluent-kafka[protobuf]` from `2.13.*` to `2.16.*`. Schema Registry now uses `httpx2` instead of `httpx`, removing the Authlib httpx deprecation warning on startup.
+
 9.2.1 (2026-10-20)
 ------------------
 
