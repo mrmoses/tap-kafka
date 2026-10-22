@@ -19,7 +19,7 @@ setup(name='tap-kafka',
       ],
       install_requires=[
           'singer-python==6.*',
-          'orjson==3.11.*',
+          'orjson==3.13.*',
           'dpath==2.2.*',
           'confluent-kafka[protobuf]==2.16.*',
           'grpcio-tools==1.76.*'
