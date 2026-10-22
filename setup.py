@@ -27,7 +27,7 @@ setup(name='tap-kafka',
       extras_require={
           'test': [
               'pytest==9.1.*',
-              'pylint==4.0.*',
+              'pylint==4.1.*',
               'pytest-cov==7.0.*'
           ]
       },
