@@ -22,7 +22,7 @@ class ProtobufDictDeserializer(ProtobufDeserializer):
         msg =  super().__call__(value, ctx)
         return MessageToDict(msg,
                              preserving_proto_field_name=True,
-                             including_default_value_fields=True)
+                             always_print_fields_with_no_presence=True)
 
 def topic_name_to_protoc_output_name(topic: str) -> str:
     """Convert topic name to the file name that protoc is generating"""
