@@ -3,6 +3,8 @@
 
 **Dependency updates**
 - Bump `confluent-kafka[protobuf]` from `2.13.*` to `2.16.*`. Schema Registry now uses `httpx2` instead of `httpx`, removing the Authlib httpx deprecation warning on startup.
+- Bump `orjson` from `3.11.*` to `3.13.*`.
+- Bump test dependencies (`pytest` 9.1, `pylint` 4.1, `pytest-cov` 7.1).
 
 **Fixes**
 - Protobuf deserialization failed with `TypeError` on protobuf 5.26+ (`including_default_value_fields` was removed from `MessageToDict`); now uses `always_print_fields_with_no_presence`.
